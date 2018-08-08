@@ -1,0 +1,104 @@
+; This is a sample configuration file.
+; All the values enclosed in sharp parentheses, mostly credentials, should be
+; replaced with your real data.
+[DEFAULT]
+; MQTT seed topics
+; Each topic can be considered as a logical group of topics. With added
+; trailing '/#' it can be used as a topic filter.
+mqtt_topic_server = <server_name>/server
+mqtt_topic_server_data = %(mqtt_topic_server)s/data
+mqtt_topic_server_status = %(mqtt_topic_server)s/status
+mqtt_topic_server_command = %(mqtt_topic_server)s/command
+
+[MQTTbroker]
+clientid = <mqtt_clientid>  ; Hardcoded default - the hostname
+host = localhost    ; Hardcoded default - localhost
+port = 1883         ; Hardcoded default - 1883
+username = <mqtt_username>  ; Registered user for logging to MQTT broker
+password = <mqtt_password>  ; Password of MQTT registered user
+
+[MQTTfilters]
+; Topics with wildcards aimed for topic filtering
+; Usually only to these wildcard topics a client subscribes. Single topics
+; are utilized for comparing and selecting only.
+; topic = topicName, topicQos
+; Examples:
+; server_dummy = %(mqtt_topic_server)s/dummy/#, 1
+; server_dummy = %(mqtt_topic_server)s/dummy/+/something/#, 2
+server_filter_data = %(mqtt_topic_server_data)s/#
+server_filter_status = %(mqtt_topic_server_status)s/#
+server_filter_command = %(mqtt_topic_server_command)s/#
+
+[MQTTtopics]
+; Theese single topics are utilized for publishing and in callbacks
+; for comparing and selecting .
+; topic = topicName, topicQos
+; Example:
+; server_dummy = %(mqtt_topic_server)s/dummy, 1
+server_data_temp = %(mqtt_topic_server_data)s/temp
+server_command = %(mqtt_topic_server_command)s
+server_command_test = %(mqtt_topic_server_command)s/test
+server_status_fan = %(mqtt_topic_server_status)s/fan
+server_command_fan = %(mqtt_topic_server_command)s/fan
+server_command_fan_percon = %(server_command_fan)s/percon
+server_command_fan_percoff = %(server_command_fan)s/percoff
+
+[Fan]
+; Parameters of cooling fan control
+; Control pin pyA20 port or connector name
+pin_fan_name = PA13
+; LED pyA20 port or connector name signalLing running fan
+; [STATUS_LED, POWER_LED]
+; pin_led_name = POWER_LED ; Green LED
+pin_led_name = STATUS_LED ; Red LED
+; Percentage of maximal temperature for turning fan on
+; Hardcoded default 85%, valid range 0 ~ 100%
+percentage_maxtemp_on = 85
+; Percentage of maximal temperature for turning fan off.
+; Hardcoded default 75%, valid range 0 ~ 100%
+; Should be sufficiently lower then turning on percentage in order to achieve
+; proper hysteresis.
+percentage_maxtemp_off = 75
+
+[TimerTemperature]
+; Period in seconds for measuring SoC temperature
+; Hardcoded default 5.0s, hardcoded valid range 1 ~ 60s (1 min.)
+period_measure = 2.0
+; Prescale (multiplier of periods) for publish SoC temperature
+; Hardcoded default 3, hardcoded valid range 1 ~ 10
+prescale_publish = 3
+; Prescale (multiplier of periods) for executing triggers related to
+; SoC temperature.
+; Hardcoded default 6, hardcoded valid range 1 ~ 1000
+prescale_triggers = 5
+
+[ThingSpeak]
+; Hardcoded default - the hostname
+clientid = <thingspeak_clientid>
+; Hardcoded default 1883
+port = 1883
+; Parameters without hardcoded default value
+host = mqtt.thingspeak.com
+mqtt_api_key = <ThingSpeak_mqtt_apikey>
+; Testing channel Test - Chalupa
+channel_id = <ThingSpeak_channel_id>
+write_api_key = <ThingSpeak_write_apikey>
+; Publish delay limit in seconds
+; Published messages sent sooner after previous messages are ignored by ThingSpeak
+; Hardcoded default 15.0s
+publish_delay = 15.0
+; Data field numbers 1 .. 8
+; Hardcoded default 1
+field_temp = 1
+; Hardcoded default 2
+field_fan = 2
+; Period in seconds for publishing to the cloud. Should be longer than publish delay.
+; Hardcoded default 600.0s = 1.0 min
+period_publish = 60.0
+
+[Blynk]
+blynk_auth = <Blynk_apikey>
+; Virtual pins
+vpin_temp = 1  ; Temperature gauge
+vpin_fan_led = 2  ; Fan status LED
+vpin_fan_btn = 3  ; Fan control button

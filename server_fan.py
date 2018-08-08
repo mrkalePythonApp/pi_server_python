@@ -1,7 +1,23 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-"""Central MQTT coordinator for the cottage IoT central server."""
-__version__ = "0.3.0"
+"""Central IoT server, fan manageer, and MQTT coordinator.
+
+Script provides following functionalities:
+
+- Script manages a fan attached to a GPIO pin for cooling the system
+  on the basis of the system temperature provided by the SoC.
+- Script acts as a MQTT coordinator utilizing local MQTT broker ``mosquitto``
+  for data exchange within the script as well as with outside environment.
+- Script communicates with cloud services ``ThingSpeak`` and ``Blynk``.
+- Script publishes system temperature and fan status (running, idle) to all
+  three platforms: ``local MQTT broker``, ``ThingSpeak cloud``, ``Blynk mobile
+  application``.
+- Script can receive commands from `local MQTT broker` and from
+  `Blynk mobile app` in order to change its behaviour during runnig, e.g.,
+  turn on or off the fan, change fan trigger temperatures, etc.
+
+"""
+__version__ = "0.1.0"
 __status__ = "Testing"
 __author__ = "Libor Gabaj"
 __copyright__ = "Copyright 2018, " + __author__
