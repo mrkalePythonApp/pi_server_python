@@ -17,7 +17,7 @@ Script provides following functionalities:
   turn on or off the fan, change fan trigger temperatures, etc.
 
 """
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __status__ = "Beta"
 __author__ = "Libor Gabaj"
 __copyright__ = "Copyright 2018, " + __author__
@@ -58,8 +58,8 @@ RESET = "RESET"
 CMD_FAN_ON = ON
 CMD_FAN_OFF = OFF
 CMD_FAN_TOGGLE = TOGGLE
-CMD_FAN_PERCON = "PERC-ON"  # Percentage of maximal temperature for fan on
-CMD_FAN_PERCOFF = "PERC-OFF"  # Percentage of maximal temperature for fan off
+CMD_FAN_PERCON = "PERCON"  # Percentage of maximal temperature for fan on
+CMD_FAN_PERCOFF = "PERCOFF"  # Percentage of maximal temperature for fan off
 
 
 ###############################################################################
@@ -89,12 +89,12 @@ blynk = None  # Object for Blynk application cooperation
 ###############################################################################
 def config_fan_percon():
     """Read configuration percentage temperature for fan turning on."""
-    return float(config.option("percentage_maxtemp_on", "Fan", 85.0))
+    return float(config.option("percentage_maxtemp_on", "Fan"))
 
 
 def config_fan_percoff():
     """Read configuration percentage temperature for fan turning off."""
-    return float(config.option("percentage_maxtemp_off", "Fan", 75.0))
+    return float(config.option("percentage_maxtemp_off", "Fan"))
 
 
 ###############################################################################
@@ -649,13 +649,16 @@ def setup_pi():
 
     Notes
     -----
-    Operational pin name are stored directly in the object as its attributes.
+    - Operational pin names are stored in the object as attributes.
+    - Default fan percentage limits are stored in the object as attributes.
 
     """
     global pi
     pi = modOrangePi.OrangePiOne()
     pi.PIN_FAN = config.option("pin_fan_name", "Fan")
     # pi.PIN_LED = config.option("pin_led_name", "Fan")
+    pi.FAN_PERC_ON = 85.0
+    pi.FAN_PERC_OFF = 75.0
 
 
 def setup_mqtt():
@@ -738,9 +741,9 @@ def setup_trigger_fan(fan_perc_on=None, fan_perc_off=None):
 
     """
     # Sanitize parameters
-    fan_perc_on = float(fan_perc_on or modOrangePi.PERC_MAXTEMP_ON)
+    fan_perc_on = float(fan_perc_on or pi.FAN_PERC_ON)
     fan_perc_on = max(min(fan_perc_on, 100.0), 0.0)
-    fan_perc_off = float(fan_perc_off or modOrangePi.PERC_MAXTEMP_OFF)
+    fan_perc_off = float(fan_perc_off or pi.FAN_PERC_OFF)
     fan_perc_off = max(min(fan_perc_off, 100.0), 0.0)
     logger.debug(
         "Setup fan triggers: %s = %s%%, %s = %s%%",

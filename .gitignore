@@ -1,3 +1,6 @@
+# Sensitive files
+server_fan.ini
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
