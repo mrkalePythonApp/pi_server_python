@@ -290,7 +290,7 @@ def thingspeak_publish(fan_status=False):
             )
     # Publication to ThingSpeak
     try:
-        logger.info("Publish to ThingSpeak")
+        logger.debug("Publish to ThingSpeak")
         if thingspeak.publish(fields=fields, status=status):
             logger.debug(
                 "Published temperature %s°C to ThingSpeak field%s",
