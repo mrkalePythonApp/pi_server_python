@@ -17,8 +17,8 @@ Script provides following functionalities:
   turn on or off the fan, change fan trigger temperatures, etc.
 
 """
-__version__ = "0.1.0"
-__status__ = "Testing"
+__version__ = "0.2.0"
+__status__ = "Beta"
 __author__ = "Libor Gabaj"
 __copyright__ = "Copyright 2018, " + __author__
 __credits__ = [__author__]
@@ -131,7 +131,7 @@ def action_fan(command, value=None):
                 pi.pin_off(pi.PIN_FAN)
             else:
                 return
-            logger.warning("Fan set to %s", command)
+            logger.info("Fan set to %s", command)
         except Exception as errmsg:
             logger.error("Fan command %s failed: %s.", command, errmsg)
         # Publishing action
@@ -143,11 +143,13 @@ def action_fan(command, value=None):
         try:
             value = abs(float(value))
             cmd_map = {CMD_FAN_PERCON: [{"fan_perc_on": value}, ON],
-                       CMD_FAN_PERCOFF: [{"fan_perc_on": value}, OFF],
+                       CMD_FAN_PERCOFF: [{"fan_perc_off": value}, OFF],
                        }
             setup_trigger_fan(**cmd_map[command][0])
-            logger.warning("Updated fan limit %s to %s%%",
-                           cmd_map[command][1], value)
+            logger.info(
+                "Updated fan limit %s to %s%%",
+                cmd_map[command][1], value
+            )
         except Exception:
             logger.error("Fan command %s failed", command)
     # Updating fan temperature percentages
@@ -156,7 +158,7 @@ def action_fan(command, value=None):
             fan_perc_on=config_fan_percon(),
             fan_perc_off=config_fan_percoff(),
         )
-        logger.warning("Reset fan limits")
+        logger.info("Reset fan limits")
 
 
 def action_script(command):
@@ -288,7 +290,7 @@ def thingspeak_publish(fan_status=False):
             )
     # Publication to ThingSpeak
     try:
-        logger.warning("Publish to ThingSpeak")
+        logger.info("Publish to ThingSpeak")
         if thingspeak.publish(fields=fields, status=status):
             logger.debug(
                 "Published temperature %s°C to ThingSpeak field%s",
@@ -345,8 +347,10 @@ def cbTimer_temp_measure(*arg, **kwargs):
     """Measure current CPU temperature."""
     # blynk_publish()
     exec_last = kwargs.pop("exec_last", False)
-    logger.info("Measured temperature %s°C",
-                filter.result(pi.measure_temperature()))
+    logger.debug(
+        "Measured temperature %s°C",
+        filter.result(pi.measure_temperature())
+    )
     if exec_last:
         # global script_run
         # script_run = False
@@ -355,7 +359,10 @@ def cbTimer_temp_measure(*arg, **kwargs):
 
 def cbTimer_temp_publish(*arg, **kwargs):
     """Publish current CPU temperature."""
-    logger.info("Publish temperature %s°C", filter.result())
+    logger.debug(
+        "Publish temperature %s°C",
+        filter.result()
+    )
     mqtt_publish_temp()
 
 
@@ -850,12 +857,12 @@ def loop():
     try:
         global blynk
         if blynk is None:
-            logger.warning("Script loop started")
+            logger.info("Script loop started")
             while (script_run):
                 time.sleep(1)
             logger.warning("Script finished")
         else:
-            logger.warning("Script run by BLYNK")
+            logger.info("Script run by BLYNK")
             blynk.run()
     except (KeyboardInterrupt, SystemExit):
         logger.warning("Script cancelled")
