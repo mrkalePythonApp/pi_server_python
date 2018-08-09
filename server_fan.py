@@ -844,8 +844,6 @@ def setup_blynk():
         """Send data to mobile app on demand."""
         blynk.virtual_write(blynk.VPIN_TEMP, filter.result())
 
-    blynk_publish_fan()
-
 
 def loop():
     """Wait for keyboard."""
