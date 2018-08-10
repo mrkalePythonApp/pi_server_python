@@ -17,7 +17,7 @@ Script provides following functionalities:
   turn on or off the fan, change fan trigger temperatures, etc.
 
 """
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __status__ = "Beta"
 __author__ = "Libor Gabaj"
 __copyright__ = "Copyright 2018, " + __author__
@@ -87,14 +87,6 @@ blynk = None  # Object for Blynk application cooperation
 ###############################################################################
 # Helper functions
 ###############################################################################
-def config_fan_percon():
-    """Read configuration percentage temperature for fan turning on."""
-    return float(config.option("percentage_maxtemp_on", "Fan"))
-
-
-def config_fan_percoff():
-    """Read configuration percentage temperature for fan turning off."""
-    return float(config.option("percentage_maxtemp_off", "Fan"))
 
 
 ###############################################################################
@@ -137,7 +129,7 @@ def action_fan(command, value=None):
         # Publishing action
         mqtt_publish_fan()
         thingspeak_publish(fan_status=True)
-        blynk_publish_fan()
+        blynk_publish_fan_status()
     # Updating fan temperature percentages
     if command in [CMD_FAN_PERCON, CMD_FAN_PERCOFF]:
         try:
@@ -150,15 +142,17 @@ def action_fan(command, value=None):
                 "Updated fan limit %s to %s%%",
                 cmd_map[command][1], value
             )
+            blynk_publish_fan_limits()
         except Exception:
             logger.error("Fan command %s failed", command)
     # Updating fan temperature percentages
     if command == RESET:
         setup_trigger_fan(
-            fan_perc_on=config_fan_percon(),
-            fan_perc_off=config_fan_percoff(),
+            fan_perc_on=pi.FAN_PERC_ON_DEF,
+            fan_perc_off=pi.FAN_PERC_OFF_DEF,
         )
         logger.info("Reset fan limits")
+        blynk_publish_fan_limits()
 
 
 def action_script(command):
@@ -322,7 +316,7 @@ def blynk_publish_temp():
     blynk.virtual_write(blynk.VPIN_TEMP, filter.result())
 
 
-def blynk_publish_fan():
+def blynk_publish_fan_status():
     """Publish fan status to Blynk mobile application."""
     global blynk
     if blynk is None:
@@ -338,6 +332,20 @@ def blynk_publish_fan():
         logger.debug("Published fan status %s to Blynk.", fan_status)
     except Exception:
         logger.error("Publishing fan status to Blynk failed.")
+
+
+def blynk_publish_fan_limits():
+    """Publish fan temperature percentages to Blynk mobile application."""
+    global blynk
+    if blynk is None:
+        return
+    try:
+        blynk.virtual_write(blynk.VPIN_FAN_PERCON, pi.FAN_PERC_ON_CUR)
+        blynk.virtual_write(blynk.VPIN_FAN_PERCOFF, pi.FAN_PERC_OFF_CUR)
+        logger.debug("Published fan percentages ON=%s%%, OFF=%s%% to Blynk.",
+                     pi.FAN_PERC_ON_CUR, pi.FAN_PERC_OFF_CUR)
+    except Exception:
+        logger.error("Publishing fan percentages to Blynk failed.")
 
 
 ###############################################################################
@@ -657,8 +665,18 @@ def setup_pi():
     pi = modOrangePi.OrangePiOne()
     pi.PIN_FAN = config.option("pin_fan_name", "Fan")
     # pi.PIN_LED = config.option("pin_led_name", "Fan")
-    pi.FAN_PERC_ON = 85.0
-    pi.FAN_PERC_OFF = 75.0
+    # Temperature percentage for fan ON
+    pi.FAN_PERC_ON_DEF = abs(float(config.option(
+        "percentage_maxtemp_on", "Fan", 85.0)))
+    pi.FAN_PERC_ON_MIN = 80.0
+    pi.FAN_PERC_ON_MAX = 95.0
+    pi.FAN_PERC_ON_CUR = pi.FAN_PERC_ON_DEF
+    # Temperature percentage for fan OFF
+    pi.FAN_PERC_OFF_DEF = abs(float(config.option(
+        "percentage_maxtemp_off", "Fan", 75.0)))
+    pi.FAN_PERC_OFF_MIN = 60.0
+    pi.FAN_PERC_OFF_MAX = 75.0
+    pi.FAN_PERC_OFF_CUR = pi.FAN_PERC_OFF_DEF
 
 
 def setup_mqtt():
@@ -723,10 +741,7 @@ def setup_trigger():
     """Define triggers for evaluating value limits."""
     global trigger
     trigger = modTrigger.Trigger()
-    setup_trigger_fan(
-        fan_perc_on=config_fan_percon(),
-        fan_perc_off=config_fan_percoff(),
-    )
+    setup_trigger_fan()
 
 
 def setup_trigger_fan(fan_perc_on=None, fan_perc_off=None):
@@ -741,30 +756,32 @@ def setup_trigger_fan(fan_perc_on=None, fan_perc_off=None):
 
     """
     # Sanitize parameters
-    fan_perc_on = float(fan_perc_on or pi.FAN_PERC_ON)
-    fan_perc_on = max(min(fan_perc_on, 100.0), 0.0)
-    fan_perc_off = float(fan_perc_off or pi.FAN_PERC_OFF)
-    fan_perc_off = max(min(fan_perc_off, 100.0), 0.0)
+    pi.FAN_PERC_ON_CUR = max(min(float(fan_perc_on or pi.FAN_PERC_ON_CUR),
+                                 pi.FAN_PERC_ON_MAX),
+                             pi.FAN_PERC_ON_MIN)
+    pi.FAN_PERC_OFF_CUR = max(min(float(fan_perc_off or pi.FAN_PERC_OFF_CUR),
+                                  pi.FAN_PERC_OFF_MAX),
+                              pi.FAN_PERC_OFF_MIN)
+    if pi.FAN_PERC_OFF_CUR > pi.FAN_PERC_ON_CUR:
+        p = pi.FAN_PERC_OFF_CUR
+        pi.FAN_PERC_OFF_CUR = pi.FAN_PERC_ON_CUR
+        pi.FAN_PERC_ON_CUR = p
+    # Set triggers
     logger.debug(
         "Setup fan triggers: %s = %s%%, %s = %s%%",
-        ON, fan_perc_on,
-        OFF, fan_perc_off)
-    if fan_perc_off > fan_perc_on:
-        p = fan_perc_off
-        fan_perc_off = fan_perc_on
-        fan_perc_on = p
-    # Set triggers
+        ON, pi.FAN_PERC_ON_CUR,
+        OFF, pi.FAN_PERC_OFF_CUR)
     trigger.set_trigger(
         id="fanon",
         mode=modTrigger.UPPER,
-        value=pi.convert_percentage_temperature(fan_perc_on),
+        value=pi.convert_percentage_temperature(pi.FAN_PERC_ON_CUR),
         callback=cbTrigger_fan,
         cmd=CMD_FAN_ON,     # Arguments to callback
     )
     trigger.set_trigger(
         id="fanoff",
         mode=modTrigger.LOWER,
-        value=pi.convert_percentage_temperature(fan_perc_off),
+        value=pi.convert_percentage_temperature(pi.FAN_PERC_OFF_CUR),
         callback=cbTrigger_fan,
         cmd=CMD_FAN_OFF,     # Arguments to callback
     )
@@ -833,6 +850,10 @@ def setup_blynk():
     blynk.VPIN_TEMP = abs(int(config.option("vpin_temp", config_group)))
     blynk.VPIN_FAN_LED = abs(int(config.option("vpin_fan_led", config_group)))
     blynk.VPIN_FAN_BTN = abs(int(config.option("vpin_fan_btn", config_group)))
+    blynk.VPIN_FAN_PERCON = abs(int(config.option("vpin_fan_percon",
+                                                  config_group)))
+    blynk.VPIN_FAN_PERCOFF = abs(int(config.option("vpin_fan_percoff",
+                                                   config_group)))
 
     @blynk.VIRTUAL_WRITE(blynk.VPIN_FAN_BTN)
     def blynk_fan_button(button_state):
@@ -854,9 +875,48 @@ def setup_blynk():
         """Send data to mobile app on demand."""
         blynk.virtual_write(blynk.VPIN_TEMP, filter.result())
 
+    @blynk.VIRTUAL_WRITE(blynk.VPIN_FAN_PERCON)
+    def blynk_fan_percon(value):
+        """Receive temperature percentage for fan ON from mobile app.
+
+        Arguments
+        ---------
+        value : str
+            Received percentage for fan ON value from Blynk numeric input
+            widget.
+        """
+        # React only on pushing the button and ignore releasing it
+        logger.debug("Fan ON percentage %s%% from Blynk virtual pin %s",
+                     value, blynk.VPIN_FAN_PERCON)
+        action_fan(CMD_FAN_PERCON, value)
+
+    @blynk.VIRTUAL_WRITE(blynk.VPIN_FAN_PERCOFF)
+    def blynk_fan_percoff(value):
+        """Receive temperature percentage for fan OFF from mobile app.
+
+        Arguments
+        ---------
+        value : str
+            Received percentage for fan OFF value from Blynk numeric input
+            widget.
+        """
+        # React only on pushing the button and ignore releasing it
+        logger.debug("Fan OFF percentage %s%% from Blynk virtual pin %s",
+                     value, blynk.VPIN_FAN_PERCOFF)
+        action_fan(CMD_FAN_PERCOFF, value)
+
+
+def setup():
+    """Global initialization."""
+    pass
+    # Init Blynk mobile application
+    # blynk_publish_temp() - Blynk reads temperature on it own
+    blynk_publish_fan_status()
+    blynk_publish_fan_limits()
+
 
 def loop():
-    """Wait for keyboard."""
+    """Wait for keyboard or system exit."""
     try:
         global blynk
         if blynk is None:
@@ -885,6 +945,7 @@ def main():
     setup_trigger()
     setup_timers()
     setup_blynk()
+    setup()
     loop()
 
 

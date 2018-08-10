@@ -102,3 +102,5 @@ blynk_auth = <Blynk_apikey>
 vpin_temp = 1  ; Temperature gauge
 vpin_fan_led = 2  ; Fan status LED
 vpin_fan_btn = 3  ; Fan control button
+vpin_fan_percon = 4  ; Fan set temperature percentage for fan on
+vpin_fan_percoff = 5  ; Fan set temperature percentage for fan off
