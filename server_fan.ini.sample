@@ -38,10 +38,12 @@ server_filter_command = %(mqtt_topic_server_command)s/#
 server_data_temp = %(mqtt_topic_server_data)s/temp
 server_command = %(mqtt_topic_server_command)s
 server_command_test = %(mqtt_topic_server_command)s/test
-server_status_fan = %(mqtt_topic_server_status)s/fan
 server_command_fan = %(mqtt_topic_server_command)s/fan
 server_command_fan_percon = %(server_command_fan)s/percon
 server_command_fan_percoff = %(server_command_fan)s/percoff
+server_status_fan = %(mqtt_topic_server_status)s/fan
+server_status_fan_percon = %(server_status_fan)s/percon
+server_status_fan_percoff = %(server_status_fan)s/percoff
 
 [Fan]
 ; Parameters of cooling fan control

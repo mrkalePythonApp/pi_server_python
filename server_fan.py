@@ -127,7 +127,7 @@ def action_fan(command, value=None):
         except Exception as errmsg:
             logger.error("Fan command %s failed: %s.", command, errmsg)
         # Publishing action
-        mqtt_publish_fan()
+        mqtt_publish_fan_status()
         thingspeak_publish(fan_status=True)
         blynk_publish_fan_status()
     # Updating fan temperature percentages
@@ -142,6 +142,7 @@ def action_fan(command, value=None):
                 "Updated fan limit %s to %s%%",
                 cmd_map[command][1], value
             )
+            mqtt_publish_fan_limits()
             blynk_publish_fan_limits()
         except Exception:
             logger.error("Fan command %s failed", command)
@@ -152,6 +153,7 @@ def action_fan(command, value=None):
             fan_perc_off=pi.FAN_PERC_OFF_DEF,
         )
         logger.info("Reset fan limits")
+        mqtt_publish_fan_limits()
         blynk_publish_fan_limits()
 
 
@@ -192,8 +194,8 @@ def mqtt_publish_temp():
             option, section, errmsg)
 
 
-def mqtt_publish_fan():
-    """Publish fan state to the MQTT status topic."""
+def mqtt_publish_fan_status():
+    """Publish fan status to the MQTT status topic."""
     if not mqtt.get_connected():
         return
     cfg_option = "server_status_fan"
@@ -215,6 +217,37 @@ def mqtt_publish_fan():
             mqtt.topic_name(cfg_option, cfg_section),
             errmsg,
         )
+
+
+def mqtt_publish_fan_limits():
+    """Publish fan temperature percentages to the MQTT status topic."""
+    if not mqtt.get_connected():
+        return
+    cfg_section = mqtt.GROUP_TOPICS
+    # Percentage ON
+    try:
+        cfg_option = "server_status_fan_percon"
+        mqtt.publish(str(pi.FAN_PERC_ON_CUR), cfg_option, cfg_section)
+        logger.debug(
+            "Published fan percentage ON=%s%% to MQTT topic %s.",
+            pi.FAN_PERC_ON_CUR, mqtt.topic_name(cfg_option, cfg_section))
+    except Exception as errmsg:
+        logger.error(
+            "Publishing fan percentage ON=%s%% to MQTT topic %s failed: %s.",
+            pi.FAN_PERC_ON_CUR, mqtt.topic_name(cfg_option, cfg_section),
+            errmsg)
+    # Percentage OFF
+    try:
+        cfg_option = "server_status_fan_percoff"
+        mqtt.publish(str(pi.FAN_PERC_OFF_CUR), cfg_option, cfg_section)
+        logger.debug(
+            "Published fan percentage OFF=%s%% to MQTT topic %s.",
+            pi.FAN_PERC_OFF_CUR, mqtt.topic_name(cfg_option, cfg_section))
+    except Exception as errmsg:
+        logger.error(
+            "Publishing fan percentage OFF=%s%% to MQTT topic %s failed: %s.",
+            pi.FAN_PERC_OFF_CUR, mqtt.topic_name(cfg_option, cfg_section),
+            errmsg)
 
 
 def mqtt_message_log(message):
@@ -301,19 +334,6 @@ def thingspeak_publish(fan_status=False):
         logger.error(
             "Publishing to ThingSpeak failed: %s",
             errmsg)
-
-
-def blynk_publish_temp():
-    """Publish temperature to Blynk.
-
-    Notes
-    -----
-    Particular mobile app widgets have to have reading frequency set to
-    ``PUSH``.
-
-    """
-    global blynk
-    blynk.virtual_write(blynk.VPIN_TEMP, filter.result())
 
 
 def blynk_publish_fan_status():
@@ -415,6 +435,8 @@ def cbMqtt_on_connect(client, userdata, flags, rc):
     if rc == 0:
         logger.debug("Connected to %s: %s", str(mqtt), userdata)
         setup_mqtt_filters()
+        mqtt_publish_fan_status()
+        mqtt_publish_fan_limits()
     else:
         logger.error("Connection to MQTT broker failed: %s", userdata)
 
@@ -565,6 +587,14 @@ def cbMqtt_on_message_command(client, userdata, message):
         logger.warning(
             "Received unknown command %s from topic %s",
             message.payload, message.topic)
+
+
+def cbBlynk_on_connect():
+    """Process actions when the script is connected to Blynk cloud."""
+    # Update mobile application
+    blynk_publish_fan_status()
+    blynk_publish_fan_limits()
+    logger.debug("Blynk mobile application synchronized")
 
 
 ###############################################################################
@@ -839,6 +869,7 @@ def setup_blynk():
     global blynk
     config_group = "Blynk"
     blynk = modBlynk.Blynk(config.option("blynk_auth", config_group))
+    blynk.on_connect(cbBlynk_on_connect)
     # Store Blynk colors
     blynk.COLOR_GREEN = "#23C48E"
     blynk.COLOR_BLUE = "#04C0F8"
@@ -908,10 +939,6 @@ def setup_blynk():
 def setup():
     """Global initialization."""
     pass
-    # Init Blynk mobile application
-    # blynk_publish_temp() - Blynk reads temperature on it own
-    blynk_publish_fan_status()
-    blynk_publish_fan_limits()
 
 
 def loop():
