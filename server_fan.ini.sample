@@ -48,17 +48,17 @@ server_command_fan_percoff = %(server_command_fan)s/percoff
 ; Control pin pyA20 port or connector name
 pin_fan_name = PA13
 ; LED pyA20 port or connector name signalLing running fan
-; [STATUS_LED, POWER_LED]
+; [STATUS_LED, POWER_LED] - not used currently
 ; pin_led_name = POWER_LED ; Green LED
-pin_led_name = STATUS_LED ; Red LED
+; pin_led_name = STATUS_LED ; Red LED
 ; Percentage of maximal temperature for turning fan on
-; Hardcoded default 85%, valid range 0 ~ 100%
-percentage_maxtemp_on = 85
+; Hardcoded default 85%, valid range 80.0 ~ 95.0% limited in code
+percentage_maxtemp_on = 95
 ; Percentage of maximal temperature for turning fan off.
-; Hardcoded default 75%, valid range 0 ~ 100%
+; Hardcoded default 75%, valid range 60.0 ~ 75.0% limited in code
 ; Should be sufficiently lower then turning on percentage in order to achieve
 ; proper hysteresis.
-percentage_maxtemp_off = 75
+percentage_maxtemp_off = 66
 
 [TimerTemperature]
 ; Period in seconds for measuring SoC temperature
