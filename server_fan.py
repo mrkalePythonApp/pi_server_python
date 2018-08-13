@@ -17,7 +17,7 @@ Script provides following functionalities:
   turn on or off the fan, change fan trigger temperatures, etc.
 
 """
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __status__ = "Beta"
 __author__ = "Libor Gabaj"
 __copyright__ = "Copyright 2018, " + __author__
@@ -763,9 +763,8 @@ def setup_trigger_fan(fan_perc_on=None, fan_perc_off=None):
                                   pi.FAN_PERC_OFF_MAX),
                               pi.FAN_PERC_OFF_MIN)
     if pi.FAN_PERC_OFF_CUR > pi.FAN_PERC_ON_CUR:
-        p = pi.FAN_PERC_OFF_CUR
-        pi.FAN_PERC_OFF_CUR = pi.FAN_PERC_ON_CUR
-        pi.FAN_PERC_ON_CUR = p
+        pi.FAN_PERC_OFF_CUR, pi.FAN_PERC_ON_CUR \
+            = pi.FAN_PERC_ON_CUR, pi.FAN_PERC_OFF_CUR
     # Set triggers
     logger.debug(
         "Setup fan triggers: %s = %s%%, %s = %s%%",
