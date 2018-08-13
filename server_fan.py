@@ -17,7 +17,7 @@ Script provides following functionalities:
   turn on or off the fan, change fan trigger temperatures, etc.
 
 """
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 __status__ = "Beta"
 __author__ = "Libor Gabaj"
 __copyright__ = "Copyright 2018, " + __author__
@@ -130,20 +130,24 @@ def action_fan(command, value=None):
         mqtt_publish_fan_status()
         thingspeak_publish(fan_status=True)
         blynk_publish_fan_status()
-    # Updating fan temperature percentages
-    if command in [CMD_FAN_PERCON, CMD_FAN_PERCOFF]:
+    # Updating fan temperature percentage ON
+    if command == CMD_FAN_PERCON:
         try:
             value = abs(float(value))
-            cmd_map = {CMD_FAN_PERCON: [{"fan_perc_on": value}, ON],
-                       CMD_FAN_PERCOFF: [{"fan_perc_off": value}, OFF],
-                       }
-            setup_trigger_fan(**cmd_map[command][0])
-            logger.info(
-                "Updated fan limit %s to %s%%",
-                cmd_map[command][1], value
-            )
-            mqtt_publish_fan_limits()
-            blynk_publish_fan_limits()
+            setup_trigger_fan(fan_perc_on=value)
+            logger.info("Updated fan percentage ON=%s%%", value)
+            mqtt_publish_fan_percon()
+            blynk_publish_fan_percon()
+        except Exception:
+            logger.error("Fan command %s failed", command)
+    # Updating fan temperature percentage ON
+    if command == CMD_FAN_PERCOFF:
+        try:
+            value = abs(float(value))
+            setup_trigger_fan(fan_perc_off=value)
+            logger.info("Updated fan percentage OFF=%s%%", value)
+            mqtt_publish_fan_percoff()
+            blynk_publish_fan_percoff()
         except Exception:
             logger.error("Fan command %s failed", command)
     # Updating fan temperature percentages
@@ -219,14 +223,13 @@ def mqtt_publish_fan_status():
         )
 
 
-def mqtt_publish_fan_limits():
-    """Publish fan temperature percentages to the MQTT status topic."""
+def mqtt_publish_fan_percon():
+    """Publish fan temperature percentage ON to the MQTT status topic."""
     if not mqtt.get_connected():
         return
+    cfg_option = "server_status_fan_percon"
     cfg_section = mqtt.GROUP_TOPICS
-    # Percentage ON
     try:
-        cfg_option = "server_status_fan_percon"
         mqtt.publish(str(pi.FAN_PERC_ON_CUR), cfg_option, cfg_section)
         logger.debug(
             "Published fan percentage ON=%s%% to MQTT topic %s.",
@@ -236,9 +239,15 @@ def mqtt_publish_fan_limits():
             "Publishing fan percentage ON=%s%% to MQTT topic %s failed: %s.",
             pi.FAN_PERC_ON_CUR, mqtt.topic_name(cfg_option, cfg_section),
             errmsg)
-    # Percentage OFF
+
+
+def mqtt_publish_fan_percoff():
+    """Publish fan temperature percentage OFF to the MQTT status topic."""
+    if not mqtt.get_connected():
+        return
+    cfg_option = "server_status_fan_percoff"
+    cfg_section = mqtt.GROUP_TOPICS
     try:
-        cfg_option = "server_status_fan_percoff"
         mqtt.publish(str(pi.FAN_PERC_OFF_CUR), cfg_option, cfg_section)
         logger.debug(
             "Published fan percentage OFF=%s%% to MQTT topic %s.",
@@ -248,6 +257,12 @@ def mqtt_publish_fan_limits():
             "Publishing fan percentage OFF=%s%% to MQTT topic %s failed: %s.",
             pi.FAN_PERC_OFF_CUR, mqtt.topic_name(cfg_option, cfg_section),
             errmsg)
+
+
+def mqtt_publish_fan_limits():
+    """Publish fan temperature percentages to the MQTT status topic."""
+    mqtt_publish_fan_percon()
+    mqtt_publish_fan_percoff()
 
 
 def mqtt_message_log(message):
@@ -354,18 +369,36 @@ def blynk_publish_fan_status():
         logger.error("Publishing fan status to Blynk failed.")
 
 
-def blynk_publish_fan_limits():
-    """Publish fan temperature percentages to Blynk mobile application."""
+def blynk_publish_fan_percon():
+    """Publish fan temperature percentage ON to Blynk mobile application."""
     global blynk
     if blynk is None:
         return
     try:
         blynk.virtual_write(blynk.VPIN_FAN_PERCON, pi.FAN_PERC_ON_CUR)
-        blynk.virtual_write(blynk.VPIN_FAN_PERCOFF, pi.FAN_PERC_OFF_CUR)
-        logger.debug("Published fan percentages ON=%s%%, OFF=%s%% to Blynk.",
-                     pi.FAN_PERC_ON_CUR, pi.FAN_PERC_OFF_CUR)
+        logger.debug("Published fan percentages ON=%s%% to Blynk.",
+                     pi.FAN_PERC_ON_CUR)
     except Exception:
-        logger.error("Publishing fan percentages to Blynk failed.")
+        logger.error("Publishing fan percentage ON to Blynk failed.")
+
+
+def blynk_publish_fan_percoff():
+    """Publish fan temperature percentage OFF to Blynk mobile application."""
+    global blynk
+    if blynk is None:
+        return
+    try:
+        blynk.virtual_write(blynk.VPIN_FAN_PERCOFF, pi.FAN_PERC_OFF_CUR)
+        logger.debug("Published fan percentages OFF=%s%% to Blynk.",
+                     pi.FAN_PERC_OFF_CUR)
+    except Exception:
+        logger.error("Publishing fan percentage OFF to Blynk failed.")
+
+
+def blynk_publish_fan_limits():
+    """Publish fan temperature percentages to Blynk mobile application."""
+    blynk_publish_fan_percon()
+    blynk_publish_fan_percoff()
 
 
 ###############################################################################
