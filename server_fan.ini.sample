@@ -11,11 +11,16 @@ mqtt_topic_server_status = %(mqtt_topic_server)s/status
 mqtt_topic_server_command = %(mqtt_topic_server)s/command
 
 [MQTTbroker]
-clientid = <mqtt_clientid>  ; Hardcoded default - the hostname
-host = localhost    ; Hardcoded default - localhost
-port = 1883         ; Hardcoded default - 1883
-username = <mqtt_username>  ; Registered user for logging to MQTT broker
-password = <mqtt_password>  ; Password of MQTT registered user
+; Hardcoded default - the hostname
+clientid = <mqtt_clientid>
+; Hardcoded default - localhost
+host = localhost
+; Hardcoded default - 1883
+port = 1883
+; Registered user for logging to MQTT broker
+username = <mqtt_username>
+; Password of MQTT registered user
+password = <mqtt_password>
 
 [MQTTfilters]
 ; Topics with wildcards aimed for topic filtering
@@ -101,8 +106,13 @@ period_publish = 60.0
 [Blynk]
 blynk_auth = <Blynk_apikey>
 ; Virtual pins
-vpin_temp = 1  ; Temperature gauge
-vpin_fan_led = 2  ; Fan status LED
-vpin_fan_btn = 3  ; Fan control button
-vpin_fan_percon = 4  ; Fan set temperature percentage for fan on
-vpin_fan_percoff = 5  ; Fan set temperature percentage for fan off
+; Temperature gauge
+vpin_temp = 1
+; Fan status LED
+vpin_fan_led = 2
+; Fan control button
+vpin_fan_btn = 3
+; Fan set temperature percentage for fan on
+vpin_fan_percon = 4
+; Fan set temperature percentage for fan off
+vpin_fan_percoff = 5

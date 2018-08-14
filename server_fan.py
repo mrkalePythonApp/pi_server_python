@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Central IoT server, fan manageer, and MQTT coordinator.
 
@@ -34,13 +34,13 @@ import sys
 import argparse
 import logging
 # Third party modules
-import BlynkLib as modBlynk
 import gbj_pythonlib_sw.config as modConfig
 import gbj_pythonlib_sw.mqtt as modMQTT
 import gbj_pythonlib_sw.statfilter as modFilter
 import gbj_pythonlib_sw.timer as modTimer
 import gbj_pythonlib_sw.trigger as modTrigger
 import gbj_pythonlib_hw.orangepi as modOrangePi
+import BlynkLib as modBlynk
 
 
 ###############################################################################
@@ -192,7 +192,6 @@ def mqtt_publish_temp():
             "Published temperature %s°C to MQTT topic %s.",
             filter.result(), mqtt.topic_name(option, section))
     except Exception as errmsg:
-        print "Libor - C"
         logger.error(
             "Temperature publishing to MQTT topic option %s:[%s] failed: %s.",
             option, section, errmsg)
@@ -290,7 +289,8 @@ def mqtt_message_log(message):
         message.topic, message.qos, message.retain)
     if message.payload is None:
         return False
-    logger.debug("%s: %s", sys._getframe(1).f_code.co_name, message.payload)
+    logger.debug("%s: %s", sys._getframe(1).f_code.co_name,
+                 message.payload.decode("utf-8"))
     return True
 
 
@@ -565,7 +565,7 @@ def cbMqtt_on_message_data(client, userdata, message):
     else:
         logger.warning(
             "Received unknown data %s from topic %s",
-            message.payload, message.topic)
+            message.payload.decode("utf-8"), message.topic)
 
 
 def cbMqtt_on_message_command(client, userdata, message):
@@ -590,7 +590,7 @@ def cbMqtt_on_message_command(client, userdata, message):
     if not mqtt_message_log(message):
         return
     # Command
-    command = message.payload
+    command = message.payload.decode("utf-8")
     if message.topic == mqtt.topic_name("server_command"):
         logger.debug(
             "Received general command %s from topic %s",
@@ -613,13 +613,13 @@ def cbMqtt_on_message_command(client, userdata, message):
         command = message.topic.split("/").pop().upper()
         logger.debug(
             "Received fan command %s with value %s from topic %s",
-            command, message.payload, message.topic)
-        action_fan(command, message.payload)
+            command, message.payload.decode("utf-8"), message.topic)
+        action_fan(command, message.payload.decode("utf-8"))
     # Unexpected data
     else:
         logger.warning(
             "Received unknown command %s from topic %s",
-            message.payload, message.topic)
+            message.payload.decode("utf-8"), message.topic)
 
 
 def cbBlynk_on_connect():
@@ -644,7 +644,7 @@ def setup_cmdline():
     # Position arguments
     parser.add_argument(
         "config",
-        type=file,
+        type=argparse.FileType("r"),
         nargs="?",
         default=config_file,
         help="Configuration INI file, default: " + config_file
@@ -710,7 +710,7 @@ def setup_config():
     """Define configuration file management."""
     global config
     config = modConfig.Config(cmdline.config)
-    # Print configuration file conten
+    # Construct configuration file content
     if cmdline.configuration:
         config.get_content()
 
