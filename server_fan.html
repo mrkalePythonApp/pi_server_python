@@ -1,0 +1,646 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>server_fan script &mdash; server_fan 1.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> server_fan
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">server_fan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Change log</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">server_fan</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>server_fan script</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/server_fan.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-server_fan">
+<span id="server-fan-script"></span><h1>server_fan script<a class="headerlink" href="#module-server_fan" title="Permalink to this headline">¶</a></h1>
+<p>Central IoT server, fan manageer, and MQTT coordinator.</p>
+<p>Script provides following functionalities:</p>
+<ul class="simple">
+<li>Script manages a fan attached to a GPIO pin for cooling the system
+on the basis of the system temperature provided by the SoC.</li>
+<li>Script acts as a MQTT coordinator utilizing local MQTT broker <code class="docutils literal notranslate"><span class="pre">mosquitto</span></code>
+for data exchange within the script as well as with outside environment.</li>
+<li>Script communicates with cloud services <code class="docutils literal notranslate"><span class="pre">ThingSpeak</span></code> and <code class="docutils literal notranslate"><span class="pre">Blynk</span></code>.</li>
+<li>Script publishes system temperature and fan status (running, idle) to all
+three platforms: <code class="docutils literal notranslate"><span class="pre">local</span> <span class="pre">MQTT</span> <span class="pre">broker</span></code>, <code class="docutils literal notranslate"><span class="pre">ThingSpeak</span> <span class="pre">cloud</span></code>, <code class="docutils literal notranslate"><span class="pre">Blynk</span> <span class="pre">mobile</span>
+<span class="pre">application</span></code>.</li>
+<li>Script can receive commands from <cite>local MQTT broker</cite> and from
+<cite>Blynk mobile app</cite> in order to change its behaviour during runnig, e.g.,
+turn on or off the fan, change fan trigger temperatures, etc.</li>
+</ul>
+<dl class="function">
+<dt id="server_fan.action_fan">
+<code class="descclassname">server_fan.</code><code class="descname">action_fan</code><span class="sig-paren">(</span><em>command</em>, <em>value=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#action_fan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.action_fan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform command for the fan.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>command</strong> (<em>str</em>) – Action name to be realized.</li>
+<li><strong>value</strong> – Any value that the action should be realized with.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.action_script">
+<code class="descclassname">server_fan.</code><code class="descname">action_script</code><span class="sig-paren">(</span><em>command</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#action_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.action_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform command for this script itself.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>command</strong> (<em>str</em>) – Received command to be realized: <code class="docutils literal notranslate"><span class="pre">{&quot;EXIT&quot;}</span></code>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.blynk_publish_fan_limits">
+<code class="descclassname">server_fan.</code><code class="descname">blynk_publish_fan_limits</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#blynk_publish_fan_limits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.blynk_publish_fan_limits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan temperature percentages to Blynk mobile application.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.blynk_publish_fan_percoff">
+<code class="descclassname">server_fan.</code><code class="descname">blynk_publish_fan_percoff</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#blynk_publish_fan_percoff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.blynk_publish_fan_percoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan temperature percentage OFF to Blynk mobile application.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.blynk_publish_fan_percon">
+<code class="descclassname">server_fan.</code><code class="descname">blynk_publish_fan_percon</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#blynk_publish_fan_percon"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.blynk_publish_fan_percon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan temperature percentage ON to Blynk mobile application.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.blynk_publish_fan_status">
+<code class="descclassname">server_fan.</code><code class="descname">blynk_publish_fan_status</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#blynk_publish_fan_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.blynk_publish_fan_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan status to Blynk mobile application.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbBlynk_on_connect">
+<code class="descclassname">server_fan.</code><code class="descname">cbBlynk_on_connect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbBlynk_on_connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbBlynk_on_connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process actions when the script is connected to Blynk cloud.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbMqtt_on_connect">
+<code class="descclassname">server_fan.</code><code class="descname">cbMqtt_on_connect</code><span class="sig-paren">(</span><em>client</em>, <em>userdata</em>, <em>flags</em>, <em>rc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbMqtt_on_connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbMqtt_on_connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process actions when the broker responds to a connection request.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>client</strong> (<em>object</em>) – MQTT client instance for this callback.</li>
+<li><strong>userdata</strong> – The private user data.</li>
+<li><strong>flags</strong> (<em>dict</em>) – Response flags sent by the MQTT broker.</li>
+<li><strong>rc</strong> (<em>int</em>) – The connection result (result code).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><code class="xref py py-func docutils literal notranslate"><span class="pre">gbj_pythonlib_sw.mqtt._on_connect()</span></code></dt>
+<dd>Description of callback arguments for proper utilizing.</dd>
+</dl>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbMqtt_on_disconnect">
+<code class="descclassname">server_fan.</code><code class="descname">cbMqtt_on_disconnect</code><span class="sig-paren">(</span><em>client</em>, <em>userdata</em>, <em>rc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbMqtt_on_disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbMqtt_on_disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process actions when the client disconnects from the broker.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>client</strong> (<em>object</em>) – MQTT client instance for this callback.</li>
+<li><strong>userdata</strong> – The private user data.</li>
+<li><strong>rc</strong> (<em>int</em>) – The connection result (result code).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><code class="xref py py-func docutils literal notranslate"><span class="pre">gbj_pythonlib_sw.mqtt._on_connect()</span></code></dt>
+<dd>Description of callback arguments for proper utilizing.</dd>
+</dl>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbMqtt_on_message">
+<code class="descclassname">server_fan.</code><code class="descname">cbMqtt_on_message</code><span class="sig-paren">(</span><em>client</em>, <em>userdata</em>, <em>message</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbMqtt_on_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbMqtt_on_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process actions when a non-filtered message has been received.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>client</strong> (<em>object</em>) – MQTT client instance for this callback.</li>
+<li><strong>userdata</strong> – The private user data.</li>
+<li><strong>message</strong> (<em>object</em>) – An instance of <code class="docutils literal notranslate"><span class="pre">MQTTMessage</span></code>.
+This is a class with members <cite>topic</cite>, <cite>payload</cite>, <cite>qos</cite>, <cite>retain</cite>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>The topic that the client subscribes to and the message does not match
+an existing topic filter callback.</li>
+<li>Use message_callback_add() to define a callback that will be called for
+specific topic filters. This function serves as fallback when none
+topic filter matched.</li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbMqtt_on_message_command">
+<code class="descclassname">server_fan.</code><code class="descname">cbMqtt_on_message_command</code><span class="sig-paren">(</span><em>client</em>, <em>userdata</em>, <em>message</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbMqtt_on_message_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbMqtt_on_message_command" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process server command at receiving a message from the command topic(s).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>client</strong> (<em>object</em>) – MQTT client instance for this callback.</li>
+<li><strong>userdata</strong> – The private user data.</li>
+<li><strong>message</strong> (<em>object</em>) – An instance of <code class="docutils literal notranslate"><span class="pre">MQTTMessage</span></code>.
+This is a class with members <cite>topic</cite>, <cite>payload</cite>, <cite>qos</cite>, <cite>retain</cite>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>The topic that the client subscribes to and the message match the topic
+filter for server commands.</li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbMqtt_on_message_data">
+<code class="descclassname">server_fan.</code><code class="descname">cbMqtt_on_message_data</code><span class="sig-paren">(</span><em>client</em>, <em>userdata</em>, <em>message</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbMqtt_on_message_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbMqtt_on_message_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process server data send through a MQTT topic(s).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>client</strong> (<em>object</em>) – MQTT client instance for this callback.</li>
+<li><strong>userdata</strong> – The private user data.</li>
+<li><strong>message</strong> (<em>object</em>) – An instance of <code class="docutils literal notranslate"><span class="pre">MQTTMessage</span></code>.
+This is a class with members <cite>topic</cite>, <cite>payload</cite>, <cite>qos</cite>, <cite>retain</cite>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbMqtt_on_subscribe">
+<code class="descclassname">server_fan.</code><code class="descname">cbMqtt_on_subscribe</code><span class="sig-paren">(</span><em>client</em>, <em>userdata</em>, <em>mid</em>, <em>granted_qos</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbMqtt_on_subscribe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbMqtt_on_subscribe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process actions when the broker responds to a subscribe request.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>client</strong> (<em>object</em>) – MQTT client instance for this callback.</li>
+<li><strong>userdata</strong> – The private user data.</li>
+<li><strong>mid</strong> (<em>int</em>) – The message ID from the subscribe request.</li>
+<li><strong>granted_qos</strong> (<em>int</em>) – The list of integers that give the QoS level the broker has granted
+for each of the different subscription requests.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbTimer_temp_measure">
+<code class="descclassname">server_fan.</code><code class="descname">cbTimer_temp_measure</code><span class="sig-paren">(</span><em>*arg</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbTimer_temp_measure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbTimer_temp_measure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Measure current CPU temperature.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbTimer_temp_publish">
+<code class="descclassname">server_fan.</code><code class="descname">cbTimer_temp_publish</code><span class="sig-paren">(</span><em>*arg</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbTimer_temp_publish"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbTimer_temp_publish" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish current CPU temperature.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbTimer_temp_triggers">
+<code class="descclassname">server_fan.</code><code class="descname">cbTimer_temp_triggers</code><span class="sig-paren">(</span><em>*arg</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbTimer_temp_triggers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbTimer_temp_triggers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute CPU temperature triggers.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbTimer_thingspeak">
+<code class="descclassname">server_fan.</code><code class="descname">cbTimer_thingspeak</code><span class="sig-paren">(</span><em>*arg</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbTimer_thingspeak"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbTimer_thingspeak" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish to ThingSpeak.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.cbTrigger_fan">
+<code class="descclassname">server_fan.</code><code class="descname">cbTrigger_fan</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#cbTrigger_fan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.cbTrigger_fan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute command for the fan.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.loop">
+<code class="descclassname">server_fan.</code><code class="descname">loop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.loop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wait for keyboard or system exit.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.main">
+<code class="descclassname">server_fan.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fundamental control function.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.mqtt_message_log">
+<code class="descclassname">server_fan.</code><code class="descname">mqtt_message_log</code><span class="sig-paren">(</span><em>message</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#mqtt_message_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.mqtt_message_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Log receiving from a MQTT topic.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>message</strong> (<em>str</em>) – An instance of <code class="docutils literal notranslate"><span class="pre">MQTTMessage</span></code>.
+This is a class with members <cite>topic</cite>, <cite>payload</cite>, <cite>qos</cite>, <cite>retain</cite>.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Flag about present message payload.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><code class="xref py py-func docutils literal notranslate"><span class="pre">gbj_pythonlib_sw.mqtt()</span></code></dt>
+<dd>Module for MQTT processing.</dd>
+</dl>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.mqtt_publish_fan_limits">
+<code class="descclassname">server_fan.</code><code class="descname">mqtt_publish_fan_limits</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#mqtt_publish_fan_limits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.mqtt_publish_fan_limits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan temperature percentages to the MQTT status topic.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.mqtt_publish_fan_percoff">
+<code class="descclassname">server_fan.</code><code class="descname">mqtt_publish_fan_percoff</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#mqtt_publish_fan_percoff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.mqtt_publish_fan_percoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan temperature percentage OFF to the MQTT status topic.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.mqtt_publish_fan_percon">
+<code class="descclassname">server_fan.</code><code class="descname">mqtt_publish_fan_percon</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#mqtt_publish_fan_percon"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.mqtt_publish_fan_percon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan temperature percentage ON to the MQTT status topic.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.mqtt_publish_fan_status">
+<code class="descclassname">server_fan.</code><code class="descname">mqtt_publish_fan_status</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#mqtt_publish_fan_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.mqtt_publish_fan_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish fan status to the MQTT status topic.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.mqtt_publish_temp">
+<code class="descclassname">server_fan.</code><code class="descname">mqtt_publish_temp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#mqtt_publish_temp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.mqtt_publish_temp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish SoC temperature to a MQTT topic.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup">
+<code class="descclassname">server_fan.</code><code class="descname">setup</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Global initialization.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_blynk">
+<code class="descclassname">server_fan.</code><code class="descname">setup_blynk</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_blynk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_blynk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define Blynk parameters.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_cmdline">
+<code class="descclassname">server_fan.</code><code class="descname">setup_cmdline</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_cmdline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_cmdline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define command line arguments.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_config">
+<code class="descclassname">server_fan.</code><code class="descname">setup_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define configuration file management.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_filter">
+<code class="descclassname">server_fan.</code><code class="descname">setup_filter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define statistical smoothing and filtering.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_logger">
+<code class="descclassname">server_fan.</code><code class="descname">setup_logger</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure logging facility.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_mqtt">
+<code class="descclassname">server_fan.</code><code class="descname">setup_mqtt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_mqtt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_mqtt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define MQTT management.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_mqtt_filters">
+<code class="descclassname">server_fan.</code><code class="descname">setup_mqtt_filters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_mqtt_filters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_mqtt_filters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define MQTT topic filters and subscribe to them.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>The function is called in on_connect callback function after successful
+connection to a MQTT broker.</li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_pi">
+<code class="descclassname">server_fan.</code><code class="descname">setup_pi</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_pi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_pi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define GPIO control.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>Operational pin names are stored in the object as attributes.</li>
+<li>Default fan percentage limits are stored in the object as attributes.</li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_thingspeak">
+<code class="descclassname">server_fan.</code><code class="descname">setup_thingspeak</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_thingspeak"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_thingspeak" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define ThingSpeak management.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_timers">
+<code class="descclassname">server_fan.</code><code class="descname">setup_timers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_timers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_timers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define dictionary of timers.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_trigger">
+<code class="descclassname">server_fan.</code><code class="descname">setup_trigger</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_trigger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_trigger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define triggers for evaluating value limits.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.setup_trigger_fan">
+<code class="descclassname">server_fan.</code><code class="descname">setup_trigger_fan</code><span class="sig-paren">(</span><em>fan_perc_on=None</em>, <em>fan_perc_off=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#setup_trigger_fan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.setup_trigger_fan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define triggers for controlling fan by SoC temperature.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fan_perc_on</strong> (<em>float</em>) – Percentage of maximal temperature for turning fan on.</li>
+<li><strong>fan_perc_off</strong> (<em>float</em>) – Percentage of maximal temperature for turning fan off.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="server_fan.thingspeak_publish">
+<code class="descclassname">server_fan.</code><code class="descname">thingspeak_publish</code><span class="sig-paren">(</span><em>fan_status=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/server_fan.html#thingspeak_publish"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#server_fan.thingspeak_publish" title="Permalink to this definition">¶</a></dt>
+<dd><p>Publish to ThingSpeak.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fan_status</strong> (<em>bool</em>) – Flag determining whether current fan state should be published
+as a ThingSpeak channel status.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Data fields are published automatically.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Libor Gabaj.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,1217 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>server_fan &mdash; server_fan 1.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> server_fan
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">server_fan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Change log</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">server_fan</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>server_fan</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for server_fan</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;Central IoT server, fan manageer, and MQTT coordinator.</span>
+
+<span class="sd">Script provides following functionalities:</span>
+
+<span class="sd">- Script manages a fan attached to a GPIO pin for cooling the system</span>
+<span class="sd">  on the basis of the system temperature provided by the SoC.</span>
+<span class="sd">- Script acts as a MQTT coordinator utilizing local MQTT broker ``mosquitto``</span>
+<span class="sd">  for data exchange within the script as well as with outside environment.</span>
+<span class="sd">- Script communicates with cloud services ``ThingSpeak`` and ``Blynk``.</span>
+<span class="sd">- Script publishes system temperature and fan status (running, idle) to all</span>
+<span class="sd">  three platforms: ``local MQTT broker``, ``ThingSpeak cloud``, ``Blynk mobile</span>
+<span class="sd">  application``.</span>
+<span class="sd">- Script can receive commands from `local MQTT broker` and from</span>
+<span class="sd">  `Blynk mobile app` in order to change its behaviour during runnig, e.g.,</span>
+<span class="sd">  turn on or off the fan, change fan trigger temperatures, etc.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.5.0&quot;</span>
+<span class="n">__status__</span> <span class="o">=</span> <span class="s2">&quot;Beta&quot;</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Libor Gabaj&quot;</span>
+<span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">&quot;Copyright 2018, &quot;</span> <span class="o">+</span> <span class="n">__author__</span>
+<span class="n">__credits__</span> <span class="o">=</span> <span class="p">[</span><span class="n">__author__</span><span class="p">]</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;MIT&quot;</span>
+<span class="n">__maintainer__</span> <span class="o">=</span> <span class="n">__author__</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s2">&quot;libor.gabaj@gmail.com&quot;</span>
+
+<span class="c1"># Standard library modules</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="c1"># Third party modules</span>
+<span class="kn">import</span> <span class="nn">gbj_pythonlib_sw.config</span> <span class="k">as</span> <span class="nn">modConfig</span>
+<span class="kn">import</span> <span class="nn">gbj_pythonlib_sw.mqtt</span> <span class="k">as</span> <span class="nn">modMQTT</span>
+<span class="kn">import</span> <span class="nn">gbj_pythonlib_sw.statfilter</span> <span class="k">as</span> <span class="nn">modFilter</span>
+<span class="kn">import</span> <span class="nn">gbj_pythonlib_sw.timer</span> <span class="k">as</span> <span class="nn">modTimer</span>
+<span class="kn">import</span> <span class="nn">gbj_pythonlib_sw.trigger</span> <span class="k">as</span> <span class="nn">modTrigger</span>
+<span class="kn">import</span> <span class="nn">gbj_pythonlib_hw.orangepi</span> <span class="k">as</span> <span class="nn">modOrangePi</span>
+<span class="kn">import</span> <span class="nn">BlynkLib</span> <span class="k">as</span> <span class="nn">modBlynk</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Script constants - General states and MQTT commands</span>
+<span class="c1">###############################################################################</span>
+<span class="n">ON</span> <span class="o">=</span> <span class="s2">&quot;ON&quot;</span>
+<span class="n">OFF</span> <span class="o">=</span> <span class="s2">&quot;OFF&quot;</span>
+<span class="n">TOGGLE</span> <span class="o">=</span> <span class="s2">&quot;TOGGLE&quot;</span>
+<span class="n">RESET</span> <span class="o">=</span> <span class="s2">&quot;RESET&quot;</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Script constants - Fan MQTT commands and maps</span>
+<span class="c1">###############################################################################</span>
+<span class="n">CMD_FAN_ON</span> <span class="o">=</span> <span class="n">ON</span>
+<span class="n">CMD_FAN_OFF</span> <span class="o">=</span> <span class="n">OFF</span>
+<span class="n">CMD_FAN_TOGGLE</span> <span class="o">=</span> <span class="n">TOGGLE</span>
+<span class="n">CMD_FAN_PERCON</span> <span class="o">=</span> <span class="s2">&quot;PERCON&quot;</span>  <span class="c1"># Percentage of maximal temperature for fan on</span>
+<span class="n">CMD_FAN_PERCOFF</span> <span class="o">=</span> <span class="s2">&quot;PERCOFF&quot;</span>  <span class="c1"># Percentage of maximal temperature for fan off</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Script constants - ThingSpeak statuses</span>
+<span class="c1">###############################################################################</span>
+<span class="n">STATUS_FAN_ON</span> <span class="o">=</span> <span class="s2">&quot;FAN-ON&quot;</span>
+<span class="n">STATUS_FAN_OFF</span> <span class="o">=</span> <span class="s2">&quot;FAN-OFF&quot;</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Script global variables</span>
+<span class="c1">###############################################################################</span>
+<span class="n">script_run</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Flag about running script in a loop</span>
+<span class="n">cmdline</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object with command line arguments</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object with standard logging</span>
+<span class="n">trigger</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object with triggers</span>
+<span class="nb">filter</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object with statistical smoothing and filtering</span>
+<span class="n">config</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object with MQTT configuration file processing</span>
+<span class="n">mqtt</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object for MQTT broker manipulation</span>
+<span class="n">thingspeak</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object for ThingSpeak MQTT manipulation</span>
+<span class="n">pi</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object with OrangePi GPIO control</span>
+<span class="n">blynk</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Object for Blynk application cooperation</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Helper functions</span>
+<span class="c1">###############################################################################</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># General actions</span>
+<span class="c1">###############################################################################</span>
+<div class="viewcode-block" id="action_fan"><a class="viewcode-back" href="../server_fan.html#server_fan.action_fan">[docs]</a><span class="k">def</span> <span class="nf">action_fan</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform command for the fan.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    command : str</span>
+<span class="sd">        Action name to be realized.</span>
+<span class="sd">    value</span>
+<span class="sd">        Any value that the action should be realized with.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Controlling fan</span>
+    <span class="k">if</span> <span class="n">command</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CMD_FAN_ON</span><span class="p">,</span> <span class="n">CMD_FAN_OFF</span><span class="p">,</span> <span class="n">CMD_FAN_TOGGLE</span><span class="p">]:</span>
+        <span class="c1"># Suppress publishing useless command, i.e., the command changes pin</span>
+        <span class="c1"># state that it already has.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="n">CMD_FAN_TOGGLE</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">is_pin_on</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">):</span>
+                    <span class="n">command</span> <span class="o">=</span> <span class="n">CMD_FAN_OFF</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">command</span> <span class="o">=</span> <span class="n">CMD_FAN_ON</span>
+            <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="n">CMD_FAN_ON</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">is_pin_on</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">):</span>
+                    <span class="k">return</span>
+                <span class="n">pi</span><span class="o">.</span><span class="n">pin_on</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">command</span> <span class="o">==</span> <span class="n">CMD_FAN_OFF</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">is_pin_off</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">):</span>
+                    <span class="k">return</span>
+                <span class="n">pi</span><span class="o">.</span><span class="n">pin_off</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Fan set to </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">command</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errmsg</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Fan command </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">errmsg</span><span class="p">)</span>
+        <span class="c1"># Publishing action</span>
+        <span class="n">mqtt_publish_fan_status</span><span class="p">()</span>
+        <span class="n">thingspeak_publish</span><span class="p">(</span><span class="n">fan_status</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">blynk_publish_fan_status</span><span class="p">()</span>
+    <span class="c1"># Updating fan temperature percentage ON</span>
+    <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="n">CMD_FAN_PERCON</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="n">setup_trigger_fan</span><span class="p">(</span><span class="n">fan_perc_on</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Updated fan percentage ON=</span><span class="si">%s%%</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">mqtt_publish_fan_percon</span><span class="p">()</span>
+            <span class="n">blynk_publish_fan_percon</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Fan command </span><span class="si">%s</span><span class="s2"> failed&quot;</span><span class="p">,</span> <span class="n">command</span><span class="p">)</span>
+    <span class="c1"># Updating fan temperature percentage ON</span>
+    <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="n">CMD_FAN_PERCOFF</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="n">setup_trigger_fan</span><span class="p">(</span><span class="n">fan_perc_off</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Updated fan percentage OFF=</span><span class="si">%s%%</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">mqtt_publish_fan_percoff</span><span class="p">()</span>
+            <span class="n">blynk_publish_fan_percoff</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Fan command </span><span class="si">%s</span><span class="s2"> failed&quot;</span><span class="p">,</span> <span class="n">command</span><span class="p">)</span>
+    <span class="c1"># Updating fan temperature percentages</span>
+    <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="n">RESET</span><span class="p">:</span>
+        <span class="n">setup_trigger_fan</span><span class="p">(</span>
+            <span class="n">fan_perc_on</span><span class="o">=</span><span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_DEF</span><span class="p">,</span>
+            <span class="n">fan_perc_off</span><span class="o">=</span><span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_DEF</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reset fan limits&quot;</span><span class="p">)</span>
+        <span class="n">mqtt_publish_fan_limits</span><span class="p">()</span>
+        <span class="n">blynk_publish_fan_limits</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="action_script"><a class="viewcode-back" href="../server_fan.html#server_fan.action_script">[docs]</a><span class="k">def</span> <span class="nf">action_script</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform command for this script itself.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    command : str</span>
+<span class="sd">        Received command to be realized: ``{&quot;EXIT&quot;}``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Stop script</span>
+    <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="s2">&quot;EXIT&quot;</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">script_run</span>
+        <span class="n">script_run</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># MQTT actions</span>
+<span class="c1">###############################################################################</span>
+<div class="viewcode-block" id="mqtt_publish_temp"><a class="viewcode-back" href="../server_fan.html#server_fan.mqtt_publish_temp">[docs]</a><span class="k">def</span> <span class="nf">mqtt_publish_temp</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish SoC temperature to a MQTT topic.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">get_connected</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+    <span class="n">option</span> <span class="o">=</span> <span class="s2">&quot;server_data_temp&quot;</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">GROUP_TOPICS</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mqtt</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">section</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Published temperature </span><span class="si">%s</span><span class="s2">°C to MQTT topic </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">(),</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">option</span><span class="p">,</span> <span class="n">section</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errmsg</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;Temperature publishing to MQTT topic option </span><span class="si">%s</span><span class="s2">:[</span><span class="si">%s</span><span class="s2">] failed: </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">option</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">errmsg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mqtt_publish_fan_status"><a class="viewcode-back" href="../server_fan.html#server_fan.mqtt_publish_fan_status">[docs]</a><span class="k">def</span> <span class="nf">mqtt_publish_fan_status</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan status to the MQTT status topic.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">get_connected</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="n">cfg_option</span> <span class="o">=</span> <span class="s2">&quot;server_status_fan&quot;</span>
+    <span class="n">cfg_section</span> <span class="o">=</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">GROUP_TOPICS</span>
+    <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">is_pin_on</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">STATUS_FAN_ON</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">STATUS_FAN_OFF</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mqtt</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Published fan status </span><span class="si">%s</span><span class="s2"> to MQTT topic </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">message</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errmsg</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;Publishing fan status </span><span class="si">%s</span><span class="s2"> to MQTT topic </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">message</span><span class="p">,</span>
+            <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">),</span>
+            <span class="n">errmsg</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mqtt_publish_fan_percon"><a class="viewcode-back" href="../server_fan.html#server_fan.mqtt_publish_fan_percon">[docs]</a><span class="k">def</span> <span class="nf">mqtt_publish_fan_percon</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan temperature percentage ON to the MQTT status topic.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">get_connected</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="n">cfg_option</span> <span class="o">=</span> <span class="s2">&quot;server_status_fan_percon&quot;</span>
+    <span class="n">cfg_section</span> <span class="o">=</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">GROUP_TOPICS</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mqtt</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">),</span> <span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Published fan percentage ON=</span><span class="si">%s%%</span><span class="s2"> to MQTT topic </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errmsg</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;Publishing fan percentage ON=</span><span class="si">%s%%</span><span class="s2"> to MQTT topic </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">),</span>
+            <span class="n">errmsg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mqtt_publish_fan_percoff"><a class="viewcode-back" href="../server_fan.html#server_fan.mqtt_publish_fan_percoff">[docs]</a><span class="k">def</span> <span class="nf">mqtt_publish_fan_percoff</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan temperature percentage OFF to the MQTT status topic.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">get_connected</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="n">cfg_option</span> <span class="o">=</span> <span class="s2">&quot;server_status_fan_percoff&quot;</span>
+    <span class="n">cfg_section</span> <span class="o">=</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">GROUP_TOPICS</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mqtt</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">),</span> <span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Published fan percentage OFF=</span><span class="si">%s%%</span><span class="s2"> to MQTT topic </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errmsg</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;Publishing fan percentage OFF=</span><span class="si">%s%%</span><span class="s2"> to MQTT topic </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="n">cfg_option</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">),</span>
+            <span class="n">errmsg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mqtt_publish_fan_limits"><a class="viewcode-back" href="../server_fan.html#server_fan.mqtt_publish_fan_limits">[docs]</a><span class="k">def</span> <span class="nf">mqtt_publish_fan_limits</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan temperature percentages to the MQTT status topic.&quot;&quot;&quot;</span>
+    <span class="n">mqtt_publish_fan_percon</span><span class="p">()</span>
+    <span class="n">mqtt_publish_fan_percoff</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mqtt_message_log"><a class="viewcode-back" href="../server_fan.html#server_fan.mqtt_message_log">[docs]</a><span class="k">def</span> <span class="nf">mqtt_message_log</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Log receiving from a MQTT topic.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    message : str</span>
+<span class="sd">        An instance of ``MQTTMessage``.</span>
+<span class="sd">        This is a class with members `topic`, `payload`, `qos`, `retain`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        Flag about present message payload.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    gbj_pythonlib_sw.mqtt</span>
+<span class="sd">        Module for MQTT processing.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Message from MQTT topic </span><span class="si">%s</span><span class="s2"> with qos </span><span class="si">%s</span><span class="s2"> and retain </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">qos</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">retain</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">payload</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">f_code</span><span class="o">.</span><span class="n">co_name</span><span class="p">,</span>
+                 <span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="thingspeak_publish"><a class="viewcode-back" href="../server_fan.html#server_fan.thingspeak_publish">[docs]</a><span class="k">def</span> <span class="nf">thingspeak_publish</span><span class="p">(</span><span class="n">fan_status</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Publish to ThingSpeak.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    fan_status : bool</span>
+<span class="sd">        Flag determining whether current fan state should be published</span>
+<span class="sd">        as a ThingSpeak channel status.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Data fields are published automatically.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_TEMP</span><span class="p">:</span> <span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">()}</span>
+    <span class="c1"># Changed fan state since recent publishing</span>
+    <span class="n">fan_state_cur</span> <span class="o">=</span> <span class="n">pi</span><span class="o">.</span><span class="n">pin_state</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">thingspeak</span><span class="p">,</span> <span class="s2">&quot;fan_state_old&quot;</span><span class="p">):</span>
+        <span class="n">thingspeak</span><span class="o">.</span><span class="n">fan_state_old</span> <span class="o">=</span> <span class="n">fan_state_cur</span>
+    <span class="k">if</span> <span class="n">fan_state_cur</span> <span class="o">!=</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">fan_state_old</span><span class="p">:</span>
+        <span class="n">fields</span><span class="p">[</span><span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_FAN</span><span class="p">]</span> <span class="o">=</span> <span class="n">fan_state_cur</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Fan state change </span><span class="si">%s</span><span class="s2"> -&gt; </span><span class="si">%s</span><span class="s2"> for ThingSpeak field</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">thingspeak</span><span class="o">.</span><span class="n">fan_state_old</span><span class="p">,</span> <span class="n">fan_state_cur</span><span class="p">,</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_FAN</span><span class="p">)</span>
+        <span class="n">thingspeak</span><span class="o">.</span><span class="n">fan_state_old</span> <span class="o">=</span> <span class="n">fan_state_cur</span>
+    <span class="c1"># Fan status</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">fan_status</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">is_pin_on</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">):</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">STATUS_FAN_ON</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">STATUS_FAN_OFF</span>
+        <span class="n">status</span> <span class="o">+=</span> <span class="s2">&quot;: </span><span class="si">{}</span><span class="s2">°C </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">fields</span><span class="p">[</span><span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_TEMP</span><span class="p">],</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">ctime</span><span class="p">()</span>
+            <span class="p">)</span>
+    <span class="c1"># Publication to ThingSpeak</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Publish to ThingSpeak&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">fields</span><span class="o">=</span><span class="n">fields</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;Published temperature </span><span class="si">%s</span><span class="s2">°C to ThingSpeak field</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">fields</span><span class="p">[</span><span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_TEMP</span><span class="p">],</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_TEMP</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_FAN</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;Published fan state </span><span class="si">%s</span><span class="s2"> to ThingSpeak field</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">fields</span><span class="p">[</span><span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_FAN</span><span class="p">],</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_FAN</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">status</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;Published channel status </span><span class="si">%s</span><span class="s2"> to ThingSpeak&quot;</span><span class="p">,</span>
+                    <span class="n">status</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errmsg</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;Publishing to ThingSpeak failed: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">errmsg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="blynk_publish_fan_status"><a class="viewcode-back" href="../server_fan.html#server_fan.blynk_publish_fan_status">[docs]</a><span class="k">def</span> <span class="nf">blynk_publish_fan_status</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan status to Blynk mobile application.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">blynk</span>
+    <span class="k">if</span> <span class="n">blynk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">is_pin_on</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span><span class="p">):</span>
+        <span class="n">fan_status</span> <span class="o">=</span> <span class="n">ON</span>
+        <span class="n">led_value</span> <span class="o">=</span> <span class="mi">255</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fan_status</span> <span class="o">=</span> <span class="n">OFF</span>
+        <span class="n">led_value</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">blynk</span><span class="o">.</span><span class="n">virtual_write</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_LED</span><span class="p">,</span> <span class="n">led_value</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Published fan status </span><span class="si">%s</span><span class="s2"> to Blynk.&quot;</span><span class="p">,</span> <span class="n">fan_status</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Publishing fan status to Blynk failed.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="blynk_publish_fan_percon"><a class="viewcode-back" href="../server_fan.html#server_fan.blynk_publish_fan_percon">[docs]</a><span class="k">def</span> <span class="nf">blynk_publish_fan_percon</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan temperature percentage ON to Blynk mobile application.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">blynk</span>
+    <span class="k">if</span> <span class="n">blynk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">blynk</span><span class="o">.</span><span class="n">virtual_write</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCON</span><span class="p">,</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Published fan percentages ON=</span><span class="si">%s%%</span><span class="s2"> to Blynk.&quot;</span><span class="p">,</span>
+                     <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Publishing fan percentage ON to Blynk failed.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="blynk_publish_fan_percoff"><a class="viewcode-back" href="../server_fan.html#server_fan.blynk_publish_fan_percoff">[docs]</a><span class="k">def</span> <span class="nf">blynk_publish_fan_percoff</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan temperature percentage OFF to Blynk mobile application.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">blynk</span>
+    <span class="k">if</span> <span class="n">blynk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">blynk</span><span class="o">.</span><span class="n">virtual_write</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCOFF</span><span class="p">,</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Published fan percentages OFF=</span><span class="si">%s%%</span><span class="s2"> to Blynk.&quot;</span><span class="p">,</span>
+                     <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Publishing fan percentage OFF to Blynk failed.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="blynk_publish_fan_limits"><a class="viewcode-back" href="../server_fan.html#server_fan.blynk_publish_fan_limits">[docs]</a><span class="k">def</span> <span class="nf">blynk_publish_fan_limits</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Publish fan temperature percentages to Blynk mobile application.&quot;&quot;&quot;</span>
+    <span class="n">blynk_publish_fan_percon</span><span class="p">()</span>
+    <span class="n">blynk_publish_fan_percoff</span><span class="p">()</span></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Callback functions</span>
+<span class="c1">###############################################################################</span>
+<div class="viewcode-block" id="cbTimer_temp_measure"><a class="viewcode-back" href="../server_fan.html#server_fan.cbTimer_temp_measure">[docs]</a><span class="k">def</span> <span class="nf">cbTimer_temp_measure</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Measure current CPU temperature.&quot;&quot;&quot;</span>
+    <span class="c1"># blynk_publish()</span>
+    <span class="n">exec_last</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;exec_last&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Measured temperature </span><span class="si">%s</span><span class="s2">°C&quot;</span><span class="p">,</span>
+        <span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">measure_temperature</span><span class="p">())</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">exec_last</span><span class="p">:</span>
+        <span class="c1"># global script_run</span>
+        <span class="c1"># script_run = False</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="cbTimer_temp_publish"><a class="viewcode-back" href="../server_fan.html#server_fan.cbTimer_temp_publish">[docs]</a><span class="k">def</span> <span class="nf">cbTimer_temp_publish</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Publish current CPU temperature.&quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Publish temperature </span><span class="si">%s</span><span class="s2">°C&quot;</span><span class="p">,</span>
+        <span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">mqtt_publish_temp</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="cbTimer_temp_triggers"><a class="viewcode-back" href="../server_fan.html#server_fan.cbTimer_temp_triggers">[docs]</a><span class="k">def</span> <span class="nf">cbTimer_temp_triggers</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Execute CPU temperature triggers.&quot;&quot;&quot;</span>
+    <span class="n">trigger</span><span class="o">.</span><span class="n">exec_triggers</span><span class="p">(</span><span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">(),</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fanon&quot;</span><span class="p">,</span> <span class="s2">&quot;fanoff&quot;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="cbTimer_thingspeak"><a class="viewcode-back" href="../server_fan.html#server_fan.cbTimer_thingspeak">[docs]</a><span class="k">def</span> <span class="nf">cbTimer_thingspeak</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Publish to ThingSpeak.&quot;&quot;&quot;</span>
+    <span class="n">thingspeak_publish</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="cbTrigger_fan"><a class="viewcode-back" href="../server_fan.html#server_fan.cbTrigger_fan">[docs]</a><span class="k">def</span> <span class="nf">cbTrigger_fan</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Execute command for the fan.&quot;&quot;&quot;</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">command</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">action_fan</span><span class="p">(</span><span class="n">command</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cbMqtt_on_connect"><a class="viewcode-back" href="../server_fan.html#server_fan.cbMqtt_on_connect">[docs]</a><span class="k">def</span> <span class="nf">cbMqtt_on_connect</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">rc</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process actions when the broker responds to a connection request.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    client : object</span>
+<span class="sd">        MQTT client instance for this callback.</span>
+<span class="sd">    userdata</span>
+<span class="sd">        The private user data.</span>
+<span class="sd">    flags : dict</span>
+<span class="sd">        Response flags sent by the MQTT broker.</span>
+<span class="sd">    rc : int</span>
+<span class="sd">        The connection result (result code).</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    gbj_pythonlib_sw.mqtt._on_connect()</span>
+<span class="sd">        Description of callback arguments for proper utilizing.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rc</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Connected to </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">mqtt</span><span class="p">),</span> <span class="n">userdata</span><span class="p">)</span>
+        <span class="n">setup_mqtt_filters</span><span class="p">()</span>
+        <span class="n">mqtt_publish_fan_status</span><span class="p">()</span>
+        <span class="n">mqtt_publish_fan_limits</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Connection to MQTT broker failed: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">userdata</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cbMqtt_on_disconnect"><a class="viewcode-back" href="../server_fan.html#server_fan.cbMqtt_on_disconnect">[docs]</a><span class="k">def</span> <span class="nf">cbMqtt_on_disconnect</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">rc</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process actions when the client disconnects from the broker.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    client : object</span>
+<span class="sd">        MQTT client instance for this callback.</span>
+<span class="sd">    userdata</span>
+<span class="sd">        The private user data.</span>
+<span class="sd">    rc : int</span>
+<span class="sd">        The connection result (result code).</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    gbj_pythonlib_sw.mqtt._on_connect()</span>
+<span class="sd">        Description of callback arguments for proper utilizing.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Disconnected from </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">mqtt</span><span class="p">),</span> <span class="n">userdata</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cbMqtt_on_subscribe"><a class="viewcode-back" href="../server_fan.html#server_fan.cbMqtt_on_subscribe">[docs]</a><span class="k">def</span> <span class="nf">cbMqtt_on_subscribe</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">mid</span><span class="p">,</span> <span class="n">granted_qos</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process actions when the broker responds to a subscribe request.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    client : object</span>
+<span class="sd">        MQTT client instance for this callback.</span>
+<span class="sd">    userdata</span>
+<span class="sd">        The private user data.</span>
+<span class="sd">    mid : int</span>
+<span class="sd">        The message ID from the subscribe request.</span>
+<span class="sd">    granted_qos : int</span>
+<span class="sd">        The list of integers that give the QoS level the broker has granted</span>
+<span class="sd">        for each of the different subscription requests.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># logger.debug(&quot;Subscribed to MQTT topic with message id %d&quot;, mid)</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="cbMqtt_on_message"><a class="viewcode-back" href="../server_fan.html#server_fan.cbMqtt_on_message">[docs]</a><span class="k">def</span> <span class="nf">cbMqtt_on_message</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process actions when a non-filtered message has been received.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    client : object</span>
+<span class="sd">        MQTT client instance for this callback.</span>
+<span class="sd">    userdata</span>
+<span class="sd">        The private user data.</span>
+<span class="sd">    message : object</span>
+<span class="sd">        An instance of ``MQTTMessage``.</span>
+<span class="sd">        This is a class with members `topic`, `payload`, `qos`, `retain`.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The topic that the client subscribes to and the message does not match</span>
+<span class="sd">      an existing topic filter callback.</span>
+<span class="sd">    - Use message_callback_add() to define a callback that will be called for</span>
+<span class="sd">      specific topic filters. This function serves as fallback when none</span>
+<span class="sd">      topic filter matched.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt_message_log</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+        <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="cbMqtt_on_message_data"><a class="viewcode-back" href="../server_fan.html#server_fan.cbMqtt_on_message_data">[docs]</a><span class="k">def</span> <span class="nf">cbMqtt_on_message_data</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process server data send through a MQTT topic(s).</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    client : object</span>
+<span class="sd">        MQTT client instance for this callback.</span>
+<span class="sd">    userdata</span>
+<span class="sd">        The private user data.</span>
+<span class="sd">    message : object</span>
+<span class="sd">        An instance of ``MQTTMessage``.</span>
+<span class="sd">        This is a class with members `topic`, `payload`, `qos`, `retain`.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt_message_log</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="c1"># CPU Temperature</span>
+    <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span> <span class="o">==</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="s2">&quot;server_data_temp&quot;</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received temperature </span><span class="si">%s</span><span class="s2">°C&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="c1"># Unexpected data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">&quot;Received unknown data </span><span class="si">%s</span><span class="s2"> from topic </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cbMqtt_on_message_command"><a class="viewcode-back" href="../server_fan.html#server_fan.cbMqtt_on_message_command">[docs]</a><span class="k">def</span> <span class="nf">cbMqtt_on_message_command</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process server command at receiving a message from the command topic(s).</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    client : object</span>
+<span class="sd">        MQTT client instance for this callback.</span>
+<span class="sd">    userdata</span>
+<span class="sd">        The private user data.</span>
+<span class="sd">    message : object</span>
+<span class="sd">        An instance of ``MQTTMessage``.</span>
+<span class="sd">        This is a class with members `topic`, `payload`, `qos`, `retain`.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The topic that the client subscribes to and the message match the topic</span>
+<span class="sd">      filter for server commands.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mqtt_message_log</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="c1"># Command</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span> <span class="o">==</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="s2">&quot;server_command&quot;</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Received general command </span><span class="si">%s</span><span class="s2"> from topic </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span>
+        <span class="n">action_script</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+    <span class="c1"># Test data</span>
+    <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span> <span class="o">==</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="s2">&quot;server_command_test&quot;</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Received test command </span><span class="si">%s</span><span class="s2"> from topic </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span>
+    <span class="c1"># Fan control</span>
+    <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span> <span class="o">==</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="s2">&quot;server_command_fan&quot;</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Received fan command </span><span class="si">%s</span><span class="s2"> from topic </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span>
+        <span class="n">action_fan</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span> <span class="ow">in</span> <span class="p">[</span><span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="s2">&quot;server_command_fan_percon&quot;</span><span class="p">),</span>
+                           <span class="n">mqtt</span><span class="o">.</span><span class="n">topic_name</span><span class="p">(</span><span class="s2">&quot;server_command_fan_percoff&quot;</span><span class="p">),</span>
+                           <span class="p">]:</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Received fan command </span><span class="si">%s</span><span class="s2"> with value </span><span class="si">%s</span><span class="s2"> from topic </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span>
+        <span class="n">action_fan</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="c1"># Unexpected data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">&quot;Received unknown command </span><span class="si">%s</span><span class="s2"> from topic </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="n">message</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cbBlynk_on_connect"><a class="viewcode-back" href="../server_fan.html#server_fan.cbBlynk_on_connect">[docs]</a><span class="k">def</span> <span class="nf">cbBlynk_on_connect</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Process actions when the script is connected to Blynk cloud.&quot;&quot;&quot;</span>
+    <span class="c1"># Update mobile application</span>
+    <span class="n">blynk_publish_fan_status</span><span class="p">()</span>
+    <span class="n">blynk_publish_fan_limits</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Blynk mobile application synchronized&quot;</span><span class="p">)</span></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Setup functions</span>
+<span class="c1">###############################################################################</span>
+<div class="viewcode-block" id="setup_cmdline"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_cmdline">[docs]</a><span class="k">def</span> <span class="nf">setup_cmdline</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define command line arguments.&quot;&quot;&quot;</span>
+    <span class="n">config_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;.ini&quot;</span>
+    <span class="n">log_folder</span> <span class="o">=</span> <span class="s2">&quot;/var/log&quot;</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Tester, version &quot;</span> <span class="o">+</span> <span class="n">__version__</span>
+    <span class="p">)</span>
+    <span class="c1"># Position arguments</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;config&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">FileType</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">),</span>
+        <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="n">config_file</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Configuration INI file, default: &quot;</span> <span class="o">+</span> <span class="n">config_file</span>
+    <span class="p">)</span>
+    <span class="c1"># Options</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-V&quot;</span><span class="p">,</span> <span class="s2">&quot;--version&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;version&quot;</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(prog)s</span><span class="s2"> &quot;</span> <span class="o">+</span> <span class="n">__version__</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Current version of the script.&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-v&quot;</span><span class="p">,</span> <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="s2">&quot;warning&quot;</span><span class="p">,</span> <span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;critical&quot;</span><span class="p">],</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Level of logging to console.&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-l&quot;</span><span class="p">,</span> <span class="s2">&quot;--loglevel&quot;</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="s2">&quot;warning&quot;</span><span class="p">,</span> <span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;critical&quot;</span><span class="p">],</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Level of logging to log file.&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-d&quot;</span><span class="p">,</span> <span class="s2">&quot;--logdir&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="n">log_folder</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Folder of a log file, default &quot;</span> <span class="o">+</span> <span class="n">log_folder</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;--configuration&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Print configuration parameters in form of INI file content.&quot;&quot;&quot;</span>
+    <span class="p">)</span>
+    <span class="c1"># Process command line arguments</span>
+    <span class="k">global</span> <span class="n">cmdline</span>
+    <span class="n">cmdline</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="setup_logger"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_logger">[docs]</a><span class="k">def</span> <span class="nf">setup_logger</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Configure logging facility.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">logger</span>
+    <span class="c1"># Set logging to file for module and script logging</span>
+    <span class="n">log_file</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">cmdline</span><span class="o">.</span><span class="n">logdir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.log&quot;</span><span class="p">])</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+        <span class="n">level</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">logging</span><span class="p">,</span> <span class="n">cmdline</span><span class="o">.</span><span class="n">loglevel</span><span class="o">.</span><span class="n">upper</span><span class="p">()),</span>
+        <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> - </span><span class="si">%(levelname)-8s</span><span class="s2"> - </span><span class="si">%(name)-20s</span><span class="s2">: </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">log_file</span><span class="p">,</span>
+        <span class="n">filemode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span>
+    <span class="p">)</span>
+    <span class="c1"># Set console logging</span>
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+        <span class="s2">&quot;</span><span class="si">%(levelname)-8s</span><span class="s2"> - </span><span class="si">%(name)-20s</span><span class="s2">: </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">console_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+    <span class="n">console_handler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">logging</span><span class="p">,</span> <span class="n">cmdline</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span>
+    <span class="n">console_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="n">__version__</span><span class="p">))</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">console_handler</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Script started from file </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="setup_config"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_config">[docs]</a><span class="k">def</span> <span class="nf">setup_config</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define configuration file management.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">config</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">modConfig</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">cmdline</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+    <span class="c1"># Construct configuration file content</span>
+    <span class="k">if</span> <span class="n">cmdline</span><span class="o">.</span><span class="n">configuration</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">get_content</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="setup_pi"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_pi">[docs]</a><span class="k">def</span> <span class="nf">setup_pi</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define GPIO control.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Operational pin names are stored in the object as attributes.</span>
+<span class="sd">    - Default fan percentage limits are stored in the object as attributes.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">pi</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="n">modOrangePi</span><span class="o">.</span><span class="n">OrangePiOne</span><span class="p">()</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">PIN_FAN</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;pin_fan_name&quot;</span><span class="p">,</span> <span class="s2">&quot;Fan&quot;</span><span class="p">)</span>
+    <span class="c1"># pi.PIN_LED = config.option(&quot;pin_led_name&quot;, &quot;Fan&quot;)</span>
+    <span class="c1"># Temperature percentage for fan ON</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_DEF</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+        <span class="s2">&quot;percentage_maxtemp_on&quot;</span><span class="p">,</span> <span class="s2">&quot;Fan&quot;</span><span class="p">,</span> <span class="mf">85.0</span><span class="p">)))</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_MIN</span> <span class="o">=</span> <span class="mf">80.0</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_MAX</span> <span class="o">=</span> <span class="mf">95.0</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span> <span class="o">=</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_DEF</span>
+    <span class="c1"># Temperature percentage for fan OFF</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_DEF</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+        <span class="s2">&quot;percentage_maxtemp_off&quot;</span><span class="p">,</span> <span class="s2">&quot;Fan&quot;</span><span class="p">,</span> <span class="mf">75.0</span><span class="p">)))</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_MIN</span> <span class="o">=</span> <span class="mf">60.0</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_MAX</span> <span class="o">=</span> <span class="mf">75.0</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span> <span class="o">=</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_DEF</span></div>
+
+
+<div class="viewcode-block" id="setup_mqtt"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_mqtt">[docs]</a><span class="k">def</span> <span class="nf">setup_mqtt</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define MQTT management.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">mqtt</span>
+    <span class="n">mqtt</span> <span class="o">=</span> <span class="n">modMQTT</span><span class="o">.</span><span class="n">MqttBroker</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">mqtt</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+        <span class="n">username</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;username&quot;</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">GROUP_BROKER</span><span class="p">),</span>
+        <span class="n">password</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;password&quot;</span><span class="p">,</span> <span class="n">mqtt</span><span class="o">.</span><span class="n">GROUP_BROKER</span><span class="p">),</span>
+        <span class="n">connect</span><span class="o">=</span><span class="n">cbMqtt_on_connect</span><span class="p">,</span>
+        <span class="n">disconnect</span><span class="o">=</span><span class="n">cbMqtt_on_disconnect</span><span class="p">,</span>
+        <span class="n">subscribe</span><span class="o">=</span><span class="n">cbMqtt_on_subscribe</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">=</span><span class="n">cbMqtt_on_message</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="setup_mqtt_filters"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_mqtt_filters">[docs]</a><span class="k">def</span> <span class="nf">setup_mqtt_filters</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define MQTT topic filters and subscribe to them.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The function is called in on_connect callback function after successful</span>
+<span class="sd">      connection to a MQTT broker.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mqtt</span><span class="o">.</span><span class="n">callback_filters</span><span class="p">(</span>
+        <span class="n">server_filter_data</span><span class="o">=</span><span class="n">cbMqtt_on_message_data</span><span class="p">,</span>
+        <span class="n">server_filter_command</span><span class="o">=</span><span class="n">cbMqtt_on_message_command</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mqtt</span><span class="o">.</span><span class="n">subscribe_filters</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">errcode</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;MQTT subscribtion to topic filters failed with error code </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">errcode</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="setup_thingspeak"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_thingspeak">[docs]</a><span class="k">def</span> <span class="nf">setup_thingspeak</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define ThingSpeak management.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">thingspeak</span>
+    <span class="n">thingspeak</span> <span class="o">=</span> <span class="n">modMQTT</span><span class="o">.</span><span class="n">ThingSpeak</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_TEMP</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;field_temp&quot;</span><span class="p">,</span>
+                                              <span class="n">thingspeak</span><span class="o">.</span><span class="n">GROUP_BROKER</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">thingspeak</span><span class="o">.</span><span class="n">FIELD_FAN</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;field_fan&quot;</span><span class="p">,</span>
+                                             <span class="n">thingspeak</span><span class="o">.</span><span class="n">GROUP_BROKER</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="setup_filter"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_filter">[docs]</a><span class="k">def</span> <span class="nf">setup_filter</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define statistical smoothing and filtering.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="nb">filter</span>
+    <span class="nb">filter</span> <span class="o">=</span> <span class="n">modFilter</span><span class="o">.</span><span class="n">StatFilterExponential</span><span class="p">(</span>
+        <span class="n">decimals</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">factor</span><span class="o">=</span><span class="mf">0.2</span>
+    <span class="p">)</span></div>
+    <span class="c1"># filter = gbj_statfilter.StatFilterRunning(</span>
+    <span class="c1">#     decimals=3,</span>
+    <span class="c1">#     stat_type=gbj_statfilter.MEDIAN,</span>
+    <span class="c1"># )</span>
+
+
+<div class="viewcode-block" id="setup_trigger"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_trigger">[docs]</a><span class="k">def</span> <span class="nf">setup_trigger</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define triggers for evaluating value limits.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">trigger</span>
+    <span class="n">trigger</span> <span class="o">=</span> <span class="n">modTrigger</span><span class="o">.</span><span class="n">Trigger</span><span class="p">()</span>
+    <span class="n">setup_trigger_fan</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="setup_trigger_fan"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_trigger_fan">[docs]</a><span class="k">def</span> <span class="nf">setup_trigger_fan</span><span class="p">(</span><span class="n">fan_perc_on</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fan_perc_off</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define triggers for controlling fan by SoC temperature.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    fan_perc_on : float</span>
+<span class="sd">        Percentage of maximal temperature for turning fan on.</span>
+<span class="sd">    fan_perc_off : float</span>
+<span class="sd">        Percentage of maximal temperature for turning fan off.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Sanitize parameters</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">fan_perc_on</span> <span class="ow">or</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">),</span>
+                                 <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_MAX</span><span class="p">),</span>
+                             <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_MIN</span><span class="p">)</span>
+    <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">fan_perc_off</span> <span class="ow">or</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">),</span>
+                                  <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_MAX</span><span class="p">),</span>
+                              <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_MIN</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span> <span class="o">&gt;</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">:</span>
+        <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">,</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span> \
+            <span class="o">=</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">,</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span>
+    <span class="c1"># Set triggers</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Setup fan triggers: </span><span class="si">%s</span><span class="s2"> = </span><span class="si">%s%%</span><span class="s2">, </span><span class="si">%s</span><span class="s2"> = </span><span class="si">%s%%</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">ON</span><span class="p">,</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">,</span>
+        <span class="n">OFF</span><span class="p">,</span> <span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">)</span>
+    <span class="n">trigger</span><span class="o">.</span><span class="n">set_trigger</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;fanon&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">modTrigger</span><span class="o">.</span><span class="n">UPPER</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">pi</span><span class="o">.</span><span class="n">convert_percentage_temperature</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_ON_CUR</span><span class="p">),</span>
+        <span class="n">callback</span><span class="o">=</span><span class="n">cbTrigger_fan</span><span class="p">,</span>
+        <span class="n">cmd</span><span class="o">=</span><span class="n">CMD_FAN_ON</span><span class="p">,</span>     <span class="c1"># Arguments to callback</span>
+    <span class="p">)</span>
+    <span class="n">trigger</span><span class="o">.</span><span class="n">set_trigger</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;fanoff&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">modTrigger</span><span class="o">.</span><span class="n">LOWER</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">pi</span><span class="o">.</span><span class="n">convert_percentage_temperature</span><span class="p">(</span><span class="n">pi</span><span class="o">.</span><span class="n">FAN_PERC_OFF_CUR</span><span class="p">),</span>
+        <span class="n">callback</span><span class="o">=</span><span class="n">cbTrigger_fan</span><span class="p">,</span>
+        <span class="n">cmd</span><span class="o">=</span><span class="n">CMD_FAN_OFF</span><span class="p">,</span>     <span class="c1"># Arguments to callback</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="setup_timers"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_timers">[docs]</a><span class="k">def</span> <span class="nf">setup_timers</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define dictionary of timers.&quot;&quot;&quot;</span>
+    <span class="c1"># Timer 01</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Timer_temp&quot;</span>
+    <span class="n">cfg_section</span> <span class="o">=</span> <span class="s2">&quot;TimerTemperature&quot;</span>
+    <span class="c1"># Measurement period</span>
+    <span class="n">c_period</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;period_measure&quot;</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">))</span>
+    <span class="n">c_period</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">c_period</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="c1"># Publishing prescale</span>
+    <span class="n">c_publish</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;prescale_publish&quot;</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">c_publish</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">c_publish</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Trigger evaluation prescale</span>
+    <span class="n">c_triggers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;prescale_triggers&quot;</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    <span class="n">c_triggers</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">c_triggers</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Setup timer </span><span class="si">%s</span><span class="s2">: period = </span><span class="si">%s</span><span class="s2">s, publish = </span><span class="si">%s</span><span class="s2">x, triggers = </span><span class="si">%s</span><span class="s2">x&quot;</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">c_period</span><span class="p">,</span> <span class="n">c_publish</span><span class="p">,</span> <span class="n">c_triggers</span><span class="p">)</span>
+    <span class="c1"># Definition</span>
+    <span class="n">timer1</span> <span class="o">=</span> <span class="n">modTimer</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span>
+        <span class="n">c_period</span><span class="p">,</span>
+        <span class="n">cbTimer_temp_measure</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="c1"># count=9,</span>
+    <span class="p">)</span>
+    <span class="n">timer1</span><span class="o">.</span><span class="n">prescaler</span><span class="p">(</span><span class="n">c_publish</span><span class="p">,</span> <span class="n">cbTimer_temp_publish</span><span class="p">)</span>
+    <span class="n">timer1</span><span class="o">.</span><span class="n">prescaler</span><span class="p">(</span><span class="n">c_triggers</span><span class="p">,</span> <span class="n">cbTimer_temp_triggers</span><span class="p">)</span>
+    <span class="n">modTimer</span><span class="o">.</span><span class="n">register_timer</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">timer1</span><span class="p">)</span>
+    <span class="c1"># Timer 02</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Timer_thingspeak&quot;</span>
+    <span class="n">cfg_section</span> <span class="o">=</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">GROUP_BROKER</span>
+    <span class="c1"># Measurement period</span>
+    <span class="n">c_period</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;period_publish&quot;</span><span class="p">,</span> <span class="n">cfg_section</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">))</span>
+    <span class="n">c_period</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">c_period</span><span class="p">,</span> <span class="n">thingspeak</span><span class="o">.</span><span class="n">get_publish_delay</span><span class="p">())</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Setup timer </span><span class="si">%s</span><span class="s2">: period = </span><span class="si">%s</span><span class="s2">s&quot;</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">c_period</span><span class="p">)</span>
+    <span class="c1"># Definition</span>
+    <span class="n">timer2</span> <span class="o">=</span> <span class="n">modTimer</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span>
+        <span class="n">c_period</span><span class="p">,</span>
+        <span class="n">cbTimer_thingspeak</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="c1"># count=9,</span>
+    <span class="p">)</span>
+    <span class="n">modTimer</span><span class="o">.</span><span class="n">register_timer</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">timer2</span><span class="p">)</span>
+    <span class="c1"># Start all timers</span>
+    <span class="n">modTimer</span><span class="o">.</span><span class="n">start_timers</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="setup_blynk"><a class="viewcode-back" href="../server_fan.html#server_fan.setup_blynk">[docs]</a><span class="k">def</span> <span class="nf">setup_blynk</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Define Blynk parameters.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">blynk</span>
+    <span class="n">config_group</span> <span class="o">=</span> <span class="s2">&quot;Blynk&quot;</span>
+    <span class="n">blynk</span> <span class="o">=</span> <span class="n">modBlynk</span><span class="o">.</span><span class="n">Blynk</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;blynk_auth&quot;</span><span class="p">,</span> <span class="n">config_group</span><span class="p">))</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">on_connect</span><span class="p">(</span><span class="n">cbBlynk_on_connect</span><span class="p">)</span>
+    <span class="c1"># Store Blynk colors</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">COLOR_GREEN</span> <span class="o">=</span> <span class="s2">&quot;#23C48E&quot;</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">COLOR_BLUE</span> <span class="o">=</span> <span class="s2">&quot;#04C0F8&quot;</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">COLOR_YELLOW</span> <span class="o">=</span> <span class="s2">&quot;#ED9D00&quot;</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">COLOR_RED</span> <span class="o">=</span> <span class="s2">&quot;#D3435C&quot;</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">COLORDARK_BLUE</span> <span class="o">=</span> <span class="s2">&quot;#5F7CD8&quot;</span>
+    <span class="c1"># Store virtual pins</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_TEMP</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;vpin_temp&quot;</span><span class="p">,</span> <span class="n">config_group</span><span class="p">)))</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_LED</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;vpin_fan_led&quot;</span><span class="p">,</span> <span class="n">config_group</span><span class="p">)))</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_BTN</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;vpin_fan_btn&quot;</span><span class="p">,</span> <span class="n">config_group</span><span class="p">)))</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCON</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;vpin_fan_percon&quot;</span><span class="p">,</span>
+                                                  <span class="n">config_group</span><span class="p">)))</span>
+    <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCOFF</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;vpin_fan_percoff&quot;</span><span class="p">,</span>
+                                                   <span class="n">config_group</span><span class="p">)))</span>
+
+    <span class="nd">@blynk</span><span class="o">.</span><span class="n">VIRTUAL_WRITE</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_BTN</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">blynk_fan_button</span><span class="p">(</span><span class="n">button_state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive command for fan from mobile app.</span>
+
+<span class="sd">        Arguments</span>
+<span class="sd">        ---------</span>
+<span class="sd">        button_state : str</span>
+<span class="sd">            Received value from Blynk button widget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># React only on pushing the button and ignore releasing it</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">button_state</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Fan button state </span><span class="si">%s</span><span class="s2"> from Blynk virtual pin </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="n">button_state</span><span class="p">,</span> <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_BTN</span><span class="p">)</span>
+            <span class="n">action_fan</span><span class="p">(</span><span class="n">CMD_FAN_TOGGLE</span><span class="p">)</span>
+
+    <span class="nd">@blynk</span><span class="o">.</span><span class="n">VIRTUAL_READ</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_TEMP</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">blynk_read_temperature</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Send data to mobile app on demand.&quot;&quot;&quot;</span>
+        <span class="n">blynk</span><span class="o">.</span><span class="n">virtual_write</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_TEMP</span><span class="p">,</span> <span class="nb">filter</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+
+    <span class="nd">@blynk</span><span class="o">.</span><span class="n">VIRTUAL_WRITE</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCON</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">blynk_fan_percon</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive temperature percentage for fan ON from mobile app.</span>
+
+<span class="sd">        Arguments</span>
+<span class="sd">        ---------</span>
+<span class="sd">        value : str</span>
+<span class="sd">            Received percentage for fan ON value from Blynk numeric input</span>
+<span class="sd">            widget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># React only on pushing the button and ignore releasing it</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Fan ON percentage </span><span class="si">%s%%</span><span class="s2"> from Blynk virtual pin </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                     <span class="n">value</span><span class="p">,</span> <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCON</span><span class="p">)</span>
+        <span class="n">action_fan</span><span class="p">(</span><span class="n">CMD_FAN_PERCON</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="nd">@blynk</span><span class="o">.</span><span class="n">VIRTUAL_WRITE</span><span class="p">(</span><span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCOFF</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">blynk_fan_percoff</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive temperature percentage for fan OFF from mobile app.</span>
+
+<span class="sd">        Arguments</span>
+<span class="sd">        ---------</span>
+<span class="sd">        value : str</span>
+<span class="sd">            Received percentage for fan OFF value from Blynk numeric input</span>
+<span class="sd">            widget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># React only on pushing the button and ignore releasing it</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Fan OFF percentage </span><span class="si">%s%%</span><span class="s2"> from Blynk virtual pin </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                     <span class="n">value</span><span class="p">,</span> <span class="n">blynk</span><span class="o">.</span><span class="n">VPIN_FAN_PERCOFF</span><span class="p">)</span>
+        <span class="n">action_fan</span><span class="p">(</span><span class="n">CMD_FAN_PERCOFF</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="setup"><a class="viewcode-back" href="../server_fan.html#server_fan.setup">[docs]</a><span class="k">def</span> <span class="nf">setup</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Global initialization.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="loop"><a class="viewcode-back" href="../server_fan.html#server_fan.loop">[docs]</a><span class="k">def</span> <span class="nf">loop</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Wait for keyboard or system exit.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">blynk</span>
+        <span class="k">if</span> <span class="n">blynk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Script loop started&quot;</span><span class="p">)</span>
+            <span class="k">while</span> <span class="p">(</span><span class="n">script_run</span><span class="p">):</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Script finished&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Script run by BLYNK&quot;</span><span class="p">)</span>
+            <span class="n">blynk</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyboardInterrupt</span><span class="p">,</span> <span class="ne">SystemExit</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Script cancelled&quot;</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">modTimer</span><span class="o">.</span><span class="n">stop_timers</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../server_fan.html#server_fan.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Fundamental control function.&quot;&quot;&quot;</span>
+    <span class="n">setup_cmdline</span><span class="p">()</span>
+    <span class="n">setup_logger</span><span class="p">()</span>
+    <span class="n">setup_config</span><span class="p">()</span>
+    <span class="n">setup_pi</span><span class="p">()</span>
+    <span class="n">setup_mqtt</span><span class="p">()</span>
+    <span class="n">setup_thingspeak</span><span class="p">()</span>
+    <span class="n">setup_filter</span><span class="p">()</span>
+    <span class="n">setup_trigger</span><span class="p">()</span>
+    <span class="n">setup_timers</span><span class="p">()</span>
+    <span class="n">setup_blynk</span><span class="p">()</span>
+    <span class="n">setup</span><span class="p">()</span>
+    <span class="n">loop</span><span class="p">()</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getegid</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s1">&#39;Script must be run as root&#39;</span><span class="p">)</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Libor Gabaj.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'1.0.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
