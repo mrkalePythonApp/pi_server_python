@@ -5,8 +5,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Documentation for Python script set pi_server_python
-====================================================
+Documentation for Python script set server_fan
+==============================================
 
 .. toctree::
    :maxdepth: 2

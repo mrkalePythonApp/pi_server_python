@@ -3,9 +3,9 @@ server_fan
 **********
 
 Script manages attached fan for cooling the system on the basis of
-the system temperature provided by the SoC_. At the same time the script acts
-as an MQTT_ coordinator utilizing local MQTT broker ``mosquitto`` for data
-exchange within IoT_. Script communicates with cloud services like
+the system temperature provided by the SoC [1]_. At the same time the script acts
+as an MQTT [2]_ coordinator utilizing local MQTT broker ``mosquitto`` for data
+exchange within IoT [3]_. Script communicates with cloud services like
 ``ThingSpeak`` and ``Blynk``.
 
 - For the sake of generating the documentation with the system ``Sphinx``,
@@ -15,12 +15,20 @@ exchange within IoT_. Script communicates with cloud services like
   e.g., ``Raspberry Pi``, ``Orange Pi``, ``Nano Pi``, etc.
 
 - The documentation configuration for the script is located in the folder
-  `docs/source`. The documentation in HTML_ format can be generated from
-  the folder `docs` by the by command ``make html``.
+  `docs/source`. The documentation can be generated from the folder `docs`
+  in HTML [4]_ format by the command ``make html`` and in PDF [5]_ format
+  by the command ``make latexpdf``.
 
-- The script can run under ``Python2`` as well as ``Python3``.
+- The generated documentation of the script is published on the dedicated
+  Github page `server_fan <https://mrkalepythonapp.github.io/server_fan/>`_.
 
-.. [SoC] System on Chip
-.. [MQTT] MQ Telemetry Transport
-.. [IoT] Internet of Things
-.. [HTML] Hyper Text Markup Language
+- The script can run under ``Python2`` as well as ``Python3``. However, it is
+  defaulted to Python3 by the `shebang`.
+
+- It is recommended to run the **script as a service** of the operating system.
+
+.. [1] System on Chip
+.. [2] MQ Telemetry Transport
+.. [3] Internet of Things
+.. [4] Hyper Text Markup Language
+.. [5] Portable Document Format

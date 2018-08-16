@@ -1,5 +1,5 @@
-pi_server_python
-================
+server_fan
+==========
 
 .. toctree::
    :maxdepth: 4
