@@ -27,6 +27,14 @@ exchange within IoT [3]_. Script communicates with cloud services like
 
 - It is recommended to run the **script as a service** of the operating system.
 
+- All relevant parameters for the script are located in the configuration INI
+  file. It contains sensitive data as well, like passwords and access tokens to
+  servers and clouds. So that the repository contains just the sample INI file
+  with placeholders instead of real such as sensitive data. The production INI
+  file should be present only and only in some trusted locality with root
+  access, e.g., in the folder ``/usr/local/etc`` in order not to be exposed to
+  regular users.
+
 .. [1] System on Chip
 .. [2] MQ Telemetry Transport
 .. [3] Internet of Things
